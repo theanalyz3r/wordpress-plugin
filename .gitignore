@@ -1,0 +1,9 @@
+.*.swp
+*.kdev4
+*.kate-swp
+*sitemap.xml*
+wp-config.php
+error_log
+.idea
+
+/vendor/
