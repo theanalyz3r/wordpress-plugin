@@ -19,6 +19,10 @@ define('QORDOBA_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('QORDOBA_VERSION', '0.1.0');
 define('QORDOBA_API_URL', 'https://app.qordoba.com/api/');
 
+if (!defined('PLL_LINGOTEK_AD')) {
+  define('PLL_LINGOTEK_AD', false);
+}
+
 require_once QORDOBA_PLUGIN_DIR . '/vendor/autoload.php';
 
 require_once QORDOBA_PLUGIN_DIR . 'class.Qordoba.php';
