@@ -6,25 +6,26 @@ class Qordoba_Object {
   protected $object = null;
   protected $object_id = null;
   protected $object_type = null;
+  protected $object_name = null;
+  protected $sent_documents = array();
   protected $version = 0;
 
   // TODO: get values from configuration
   protected $translated_meta = array();
 
   public function __construct($object) {
-    $this->document = qor()->new_qordoba_document();
 
     if ($object instanceof WP_Post) {
       $this->translated_meta = apply_filters("qor_translated_{$object->post_type}_meta", qor()->options()->get('post_fields'));
       $this->object_type = 'post';
+      $this->object_name = $object->post_type;
       $this->object_id = $object->ID;
-      $this->document->setName(sprintf('%s-%d', $object->post_type, $this->object_id));
 
     } elseif ($object instanceof WP_Term) {
       $this->translated_meta = apply_filters("qor_translated_{$object->taxonomy}_meta", qor()->options()->get('term_fields'));
       $this->object_type = 'term';
+      $this->object_name = $object->taxonomy;
       $this->object_id = $object->term_id;
-      $this->document->setName(sprintf('%s-%d', $object->taxonomy, $this->object_id));
 
     } else {
       throw new Exception('Invalid $object, should be an instance of either WP_Post or WP_Term');
@@ -38,7 +39,7 @@ class Qordoba_Object {
     $this->version = (int) $this->get_meta('_qor_version', true);
   }
 
-  public function download($language = null) {
+  public function download_bak($language = null) {
     $this->document->setTag($this->version);
     $translations = $this->document->fetchTranslation($language);
 
@@ -55,6 +56,34 @@ class Qordoba_Object {
         $result[$lang][$section] = is_object($content) ? (array)$content : $content;
       }
     }
+
+    return $result;
+  }
+
+  public function download($language = null) {
+    $result = array();
+
+    $sent_documents = $this->get_meta('_qor_sent_docs', true);
+    $fields = $this->get_fields();
+
+    foreach ($fields as $field) {
+      $document_name = $this->format_object_field($field);
+
+      if ( in_array($document_name, $sent_documents) ) {
+        $translations = $this->download_document($document_name);
+
+        foreach ($translations as $lang => $translation) {
+          if ( !isset($result[$lang]) ) {
+            $result[$lang] = array();
+          }
+
+          $result[$lang][$field] = trim(wp_kses($translation, wp_kses_allowed_html('post')));
+        }
+
+      }
+    }
+
+    $this->download_custom_fields($result);
 
     return $result;
   }
@@ -83,57 +112,143 @@ class Qordoba_Object {
   }
 
   public function upload() {
-    // increment version
     $this->version++;
-    $this->document->setTag( (string) $this->version );
-
-    if ('term' == $this->object_type)
-      $this->build_term_translation();
-    elseif ('post' == $this->object_type)
-      $this->build_post_translation();
-
-    $this->add_meta_section();
-    $this->document->createTranslation();
-
     $this->update_meta('_qor_version', $this->version);
-  }
 
-  public function build_post_translation() {
-    $post_fields = apply_filters("qor_translated_{$this->object->post_type}_fields", array('post_title', 'post_content', 'post_excerpt'));
-    $post_fields = array_unique($post_fields);
+    $fields = $this->get_fields();
+    $this->sent_documents = array();
 
-    foreach ($post_fields as $post_field) {
-      $this->document->addTranslationString($post_field, $this->object->{$post_field});
-    }
-  }
+    foreach ($fields as $field) {
+      $name = $this->format_object_field($field);
 
-  public function build_term_translation() {
-    $term_fields = apply_filters("qor_translated_{$this->object->taxonomy}_fields", array('name', 'description'));
-    $term_fields = array_unique($term_fields);
-
-    foreach ($term_fields as $term_field) {
-      $this->document->addTranslationString($term_field, $this->object->{$term_field});
+      if ( isset($this->object->{$field}) && !empty($this->object->{$field}) ) {
+        $this->send_document($name, $this->object->{$field});
+      }
     }
 
+    $this->send_custom_fields();
+
+    // remember which files were sent
+    $this->update_meta('_qor_sent_docs', $this->sent_documents);
   }
 
-  public function add_meta_section() {
-    $section_meta = $this->document->addSection('custom_fields');
-    // discard meta fields which keys are not present in translated_meta
+  protected function format_object_field($field) {
+    $field = sprintf('%s-%d-%s',
+          $this->object_name,
+          $this->object_id,
+          $field
+      );
+
+    return $this->sanitize_name($field);
+  }
+
+  protected function format_custom_field($field, $index) {
+    $field = sprintf('%s-%d_custom-field-%s-%d',
+          $this->object_name,
+          $this->object_id,
+          $field,
+          $index
+      );
+
+    return $this->sanitize_name($field);
+  }
+
+  protected function get_fields() {
+    $fields = array();
+
+    if ('post' === $this->object_type) {
+      $fields = apply_filters("qor_translated_{$this->object->post_type}_fields", array('post_title', 'post_content', 'post_excerpt'));
+      $fields = array_unique($fields);
+    } elseif ('term' == $this->object_type) {
+      $fields = apply_filters("qor_translated_{$this->object->taxonomy}_fields", array('name', 'description'));
+      $fields = array_unique($fields);
+    }
+
+    return $fields;
+  }
+
+  protected function sanitize_name($name) {
+    return preg_replace('/[^a-zA-Z0-9]/', '-', $name);
+  }
+
+  protected function send_document($name, $content) {
+    $name = $this->sanitize_name($name);
+
+    if ( empty($content) ){
+      return;
+    }
+
+    $document = qor()->new_qordoba_document('html');
+    $document->setName($name);
+    $document->setTag( (string) $this->version );
+
+    $document->addTranslationContent($content);
+
+    // send
+    $document->createTranslation();
+
+    $this->sent_documents[] = $name;
+  }
+
+  protected function download_document($name, $language = null) {
+    $name = $this->sanitize_name($name);
+
+    $document = qor()->new_qordoba_document('html');
+    $document->setName($name);
+    $document->setTag( (string) $this->version );
+
+    return $document->fetchTranslation();
+  }
+
+  protected function send_custom_fields() {
     $meta = $this->get_meta();
 
     if (!$meta)
       return;
 
+    // discard meta fields which keys are not present in translated_meta
     $meta = array_intersect_key($meta, array_flip($this->translated_meta) );
 
     foreach ($meta as $key => $values) {
       foreach ($values as $i => $value) {
-        $string_name = sprintf('%s_%d', $key, $i);
-        $section_meta->addTranslationString($string_name, $value);
+        $name = $this->format_custom_field($key, $i);
+        $this->send_document($name, $value);
       }
     }
+  }
 
+  protected function download_custom_fields(&$result) {
+    $meta = $this->get_meta();
+
+    if (!$meta && empty($result))
+      return array();
+
+    // discard meta fields which keys are not present in translated_meta
+    $meta = array_intersect_key($meta, array_flip($this->translated_meta) );
+    $sent_documents = $this->get_meta('_qor_sent_docs', true);
+
+    foreach ($meta as $key => $values) {
+
+      // generate array of empty values of this field in all languages (to preserve field keys)
+      foreach ($result as $lang => $translated_object) {
+        $result[$lang]['custom_fields'][$key] = array_fill(0, count($values), null);
+      }
+
+      foreach ($values as $i => $value) {
+        $name = $this->format_custom_field($key, $i);
+
+        if ( in_array($name, $sent_documents) ) {
+          $field_translations = $this->download_document($name);
+
+          foreach ($field_translations as $lang => $field_translation) {
+            if ( isset($result[$lang]) ) {
+              $result[$lang]['custom_fields'][$key][$i] = trim(wp_kses($field_translation, wp_kses_allowed_html('post')));
+            }
+          }
+        }
+      }
+
+    }
   }
 
   public function get_meta($key = false, $single = false) {

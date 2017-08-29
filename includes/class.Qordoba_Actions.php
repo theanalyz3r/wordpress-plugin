@@ -233,9 +233,9 @@ class Qordoba_Actions {
     }
 
     if ('post' == $object_type) {
-      $resut = qor()->download_post($object_id, $languages);
+      $resut = qor()->download_post($object_id, $languages, true);
     } elseif ('term' == $object_type) {
-      $resut = qor()->download_term($object_id, $languages);
+      $resut = qor()->download_term($object_id, $languages, true);
     } else {
       wp_send_json( array('success' => false, 'message' => 'unknown object type') );
     }
