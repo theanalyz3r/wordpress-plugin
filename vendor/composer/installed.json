@@ -373,12 +373,12 @@
         "source": {
             "type": "git",
             "url": "https://github.com/Qordobacode/api-sdk-php.git",
-            "reference": "ab04850343093a9bac38d1a355df70e57323e4ec"
+            "reference": "5d08b7beeb6cdca88d31de172b5e796f16cdddd3"
         },
         "dist": {
             "type": "zip",
-            "url": "https://api.github.com/repos/Qordobacode/api-sdk-php/zipball/ab04850343093a9bac38d1a355df70e57323e4ec",
-            "reference": "ab04850343093a9bac38d1a355df70e57323e4ec",
+            "url": "https://api.github.com/repos/Qordobacode/api-sdk-php/zipball/5d08b7beeb6cdca88d31de172b5e796f16cdddd3",
+            "reference": "5d08b7beeb6cdca88d31de172b5e796f16cdddd3",
             "shasum": ""
         },
         "require": {
@@ -388,7 +388,7 @@
         "require-dev": {
             "phpunit/phpunit": "6.2"
         },
-        "time": "2017-07-13 15:24:52",
+        "time": "2017-08-26 00:47:55",
         "type": "library",
         "installation-source": "source",
         "autoload": {
