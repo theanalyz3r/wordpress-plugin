@@ -18,12 +18,10 @@
   }
 
   $(function(){
-
     wrap = $('#qordoba_metabox');
     btnSend = $('button.qordoba-send', wrap);
     btnDownload = $('button.qordoba-download', wrap);
     gif = $('img.qordoba-loading', wrap);
-
     btnSend.on('click', send_translation);
     btnDownload.on('click', download_translation);
   });
@@ -36,7 +34,6 @@
 
   function download_translation(e) {
     e.preventDefault();
-
     $.ajax({
       type: 'POST',
       url: ajaxurl,
@@ -52,7 +49,6 @@
         languages: []
       }
     });
-
     animationStart();
   }
 
