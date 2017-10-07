@@ -26,27 +26,12 @@
 
     btnSend.on('click', send_translation);
     btnDownload.on('click', download_translation);
-  })
+  });
 
   function send_translation(e) {
     save_button.val('qordoba_send').trigger('click');
     e.preventDefault();
     return false;
-    animationStart();
-
-    $.ajax({
-      type: 'POST',
-      url: ajaxurl,
-      complete: animationStop,
-      data: {
-        action: 'qordoba_ajax_send',
-        object_type: qor_widget_data.object_type,
-        object_id: qor_widget_data.object_id,
-        qor_nonce: $('#qor_nonce').val(),
-        languages: [],
-      }
-    });
-
   }
 
   function download_translation(e) {
@@ -55,7 +40,10 @@
     $.ajax({
       type: 'POST',
       url: ajaxurl,
-      complete: animationStop,
+        complete: function () {
+            animationStop();
+            window.location.reload();
+        },
       data: {
         action: 'qordoba_ajax_download',
         object_type: qor_widget_data.object_type,
@@ -82,4 +70,4 @@
     clearTimeout(timer);
   }
 
-}(jQuery))
+}(jQuery));
