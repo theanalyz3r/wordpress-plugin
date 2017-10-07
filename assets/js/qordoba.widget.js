@@ -37,10 +37,10 @@
     $.ajax({
       type: 'POST',
       url: ajaxurl,
-        complete: function () {
-            animationStop();
-            window.location.reload();
-        },
+      complete: function () {
+          animationStop();
+          window.location.reload();
+      },
       data: {
         action: 'qordoba_ajax_download',
         object_type: qor_widget_data.object_type,
