@@ -49,7 +49,7 @@
         object_type: qor_widget_data.object_type,
         object_id: qor_widget_data.object_id,
         qor_nonce: $('#qor_nonce').val(),
-        languages: [],
+        languages: []
       }
     });
 
@@ -60,7 +60,6 @@
     gif.show();
     btnSend.attr('disabled', 'disabled');
     btnDownload.attr('disabled', 'disabled');
-    //timer = setTimeout(animationStop, 3000);
   }
 
   function animationStop() {
