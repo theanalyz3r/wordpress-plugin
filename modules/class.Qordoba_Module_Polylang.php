@@ -32,7 +32,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
     }
 
     $defaults = array(
-      'post_title' => '',
+      'post_title' => $source->post_title,
       'post_content' => '',
       'post_excerpt' => '',
       'post_type' => 'post',
@@ -143,8 +143,8 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
     }
 
     $tr_term = array(
-      'name' => $translation['name'],
-      'description' => $translation['description'],
+      'name' => !empty($translation['name']) ? $translation['name'] : $source->name,
+      'description' => !empty($translation['description'])? $translation['description'] : $source->description,
     );
 
     // translation exists
@@ -268,16 +268,25 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
         $values = array($values);
 
       // it would be easier to delete key first if we need to handle multiple values of a field
-      if ('post' == $object_type)
+      if ('post' == $object_type) {
+        $old_fields = get_post_meta($tr_id, $key);
         delete_post_meta($tr_id, $key);
-      elseif ('term' == $object_type)
+      } elseif ('term' == $object_type) {
+        $old_fields = get_term_meta($tr_id, $key);
         delete_term_meta($tr_id, $key);
+      }
 
-      foreach ($values as $value) {
-        if ('post' == $object_type)
+      foreach ($values as $index => $value) {
+        if ($value === NULL) {
+          // if value was not translated, try using existing value
+          $value = isset($old_fields[$key]) && isset($old_fields[$key][$i]) ? $old_fields[$key][$i] : '';
+        }
+
+        if ('post' == $object_type) {
           add_post_meta($tr_id, $key, $value);
-        elseif ('term' == $object_type)
+        } elseif ('term' == $object_type) {
           add_term_meta($tr_id, $key, $value);
+        }
       }
     }
   }
@@ -293,7 +302,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
     $version = $this->get_strings_version();
     $version++;
 
-    $document = qor()->new_qordoba_document();
+    $document = qor()->new_qordoba_document('json');
     $document->setName('site-strings');
     $document->setTag((string) $version);
     $sections = array_fill_keys( wp_list_pluck($strings, 'context'), null );
@@ -350,7 +359,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
     $version = $this->get_strings_version();
 
     // create new document
-    $document = qor()->new_qordoba_document();
+    $document = qor()->new_qordoba_document('json');
     $document->setName('site-strings');
     $document->setTag((string) $version);
 
