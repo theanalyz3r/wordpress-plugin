@@ -128,11 +128,11 @@ class Qordoba {
     return $this->options->get('login') && $this->options->get('password') && $this->options->get('project_id') && $this->options->get('organization_id');
   }
 
-  public function new_qordoba_document() {
+  public function new_qordoba_document($type = 'html') {
     if (!$this->qordoba_api_configured())
       throw new Exception('Missing Qordoba API configuration (login, password, organization id or project id)');
 
-    return new Qordoba\Document(
+    $document = new Qordoba\Document(
       QORDOBA_API_URL,
       $this->options->get('login'),
       $this->options->get('password'),
@@ -140,6 +140,9 @@ class Qordoba {
       $this->options->get('organization_id')
     );
 
+    $document->setType($type);
+
+    return $document;
   }
 
   public function map_qordoba_lang($qordoba_lang) {
@@ -178,7 +181,7 @@ class Qordoba {
     delete_post_meta($source_id, '_qor_updated');
   }
 
-  public function download_post($post_id, $override = false) {
+  public function download_post($post_id, $languages = false, $override = false) {
     $source_id = $this->module()->get_source_post_id($post_id);
     $source_post = get_post($source_id);
 
@@ -231,7 +234,7 @@ class Qordoba {
     delete_term_meta($source_id, '_qor_updated');
   }
 
-  public function download_term($term_id, $override = false) {
+  public function download_term($term_id, $languages = false, $override = false) {
     $source_id = $this->module()->get_source_term_id($term_id);
     $source_term = get_term($source_id);
 
