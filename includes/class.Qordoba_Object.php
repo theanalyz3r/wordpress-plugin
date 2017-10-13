@@ -110,6 +110,7 @@ class Qordoba_Object
     /**
      * @param null $language
      * @return array
+     * @throws Exception
      */
     public function download($language = null)
     {

@@ -79,7 +79,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module
 
             // insert a new post
         } else {
-            var_dump('insert a new post');
+
             // TODO: translate parent
             if ($source->post_parent && $tr_parent = PLL()->model->post->get_translation($source->post_parent, $lang)) {
                 $tr_post['post_parent'] = $tr_parent;
@@ -143,7 +143,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module
     {
         $elementorPostMeta = get_post_meta($post_id, '_elementor_data');
         $elementorData = [];
-        if (isset($elementorPostMeta[0])) {
+        if (is_array($elementorPostMeta) && isset($elementorPostMeta[0])) {
             $sourceMeta = json_decode($elementorPostMeta[0], true);
             foreach ($data as $key => $value) {
                 $tmp = explode('_', $key);
@@ -162,7 +162,9 @@ class Qordoba_Module_Polylang extends Qordoba_Module
             foreach ($elementorData as $dataKey => $dataItem) {
                 $this->recursiveMetaReplays($sourceMeta, $dataKey, $dataItem);
             }
-            update_post_meta($post_id, '_elementor_data', $sourceMeta);
+            if (0 < count($sourceMeta)) {
+                update_post_meta($post_id, '_elementor_data', $sourceMeta);
+            }
         }
         return $elementorData;
     }
@@ -178,6 +180,9 @@ class Qordoba_Module_Polylang extends Qordoba_Module
             if (isset($element['id']) && ($id === $element['id'])) {
                 if (isset($replacement['title_text'])) {
                     $element['settings']['title_text'] = $replacement['title_text'];
+                }
+                if (isset($replacement['text'])) {
+                    $element['settings']['text'] = $replacement['text'];
                 }
                 if (isset($replacement['title'])) {
                     $element['settings']['title'] = $replacement['title'];

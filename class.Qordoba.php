@@ -313,8 +313,14 @@ class Qordoba
             if (isset($item['title_text'])) {
                 $qordobaMetaData[$id . "_title_text"] = trim(strip_tags($item['title_text']));
             }
+            if (isset($item['text'])) {
+                $qordobaMetaData[$id . "_text"] = trim(strip_tags($item['text']));
+            }
             if (isset($item['description_text'])) {
                 $qordobaMetaData[$id . "_description_text"] = trim(strip_tags($item['description_text']));
+            }
+            if (isset($item['description'])) {
+                $qordobaMetaData[$id . "_description"] = trim(strip_tags($item['description']));
             }
             if (isset($item['editor'])) {
                 $qordobaMetaData[$id . "_editor"] = trim(strip_tags($item['editor']));
@@ -337,8 +343,14 @@ class Qordoba
             if (isset($item['settings']['title_text'])) {
                 $elementsData[$item['id']]['title_text'] = $item['settings']['title_text'];
             }
+            if (isset($item['settings']['text'])) {
+                $elementsData[$item['id']]['text'] = $item['settings']['text'];
+            }
             if (isset($item['settings']['description_text'])) {
                 $elementsData[$item['id']]['description_text'] = $item['settings']['description_text'];
+            }
+            if (isset($item['settings']['description'])) {
+                $elementsData[$item['id']]['description'] = $item['settings']['description'];
             }
             if (isset($item['settings']['editor'])) {
                 $elementsData[$item['id']]['editor'] = $item['settings']['editor'];
