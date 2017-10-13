@@ -215,9 +215,9 @@ class Document {
   }
 
   public function addTranslationContent($value) {
-    if($this->getType() != "html") {
-      throw new DocumentException("HTML content can be added only to appropriate project. Please set type to 'html'.", DocumentException::TRANSLATION_WRONG_TYPE);
-    }
+//    if($this->getType() != "html") {
+//      throw new DocumentException("HTML content can be added only to appropriate project. Please set type to 'html'.", DocumentException::TRANSLATION_WRONG_TYPE);
+//    }
 
     $this->translationContent = new TranslateContent();
     $this->translationContent->addContent($value);
