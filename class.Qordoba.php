@@ -325,6 +325,12 @@ class Qordoba
             if (isset($item['editor'])) {
                 $qordobaMetaData[$id . "_editor"] = trim(strip_tags($item['editor']));
             }
+            if (isset($item['testimonial_content'])) {
+                $qordobaMetaData[$id . "_testimonial_content"] = trim(strip_tags($item['testimonial_content']));
+            }
+            if (isset($item['testimonial_name'])) {
+                $qordobaMetaData[$id . "_testimonial_name"] = trim(strip_tags($item['testimonial_name']));
+            }
         }
         return $qordobaMetaData;
     }
@@ -354,6 +360,12 @@ class Qordoba
             }
             if (isset($item['settings']['editor'])) {
                 $elementsData[$item['id']]['editor'] = $item['settings']['editor'];
+            }
+            if (isset($item['settings']['testimonial_content'])) {
+                $elementsData[$item['id']]['testimonial_content'] = $item['settings']['testimonial_content'];
+            }
+            if (isset($item['settings']['testimonial_name'])) {
+                $elementsData[$item['id']]['testimonial_name'] = $item['settings']['testimonial_name'];
             }
             if (isset($item['elements']) && (0 < count($item['elements']))) {
                 $elementsData = $this->recursiveMetaParser($item['elements'], $elementsData);

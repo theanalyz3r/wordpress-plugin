@@ -63,11 +63,12 @@ class Qordoba_Module_Polylang extends Qordoba_Module
             'post_type' => $source->post_type,
         );
 
+
         // translated post already exists, update it
         if ($tr_post_id = PLL()->model->post->get($source_id, $lang)) {
             $tr_post['ID'] = $tr_post_id;
             if (isset($translation['elementor'])) {
-                $this->saveElementorData($tr_post_id, $translation['elementor']);
+                $this->save_elementor_data($tr_post_id, $translation['elementor']);
             }
             // save translated meta data
             if (isset($translation['custom_fields']))
@@ -79,7 +80,6 @@ class Qordoba_Module_Polylang extends Qordoba_Module
 
             // insert a new post
         } else {
-
             // TODO: translate parent
             if ($source->post_parent && $tr_parent = PLL()->model->post->get_translation($source->post_parent, $lang)) {
                 $tr_post['post_parent'] = $tr_parent;
@@ -97,9 +97,6 @@ class Qordoba_Module_Polylang extends Qordoba_Module
             }
 
             if ($tr_post_id) {
-                if (isset($translation['elementor'])) {
-                    $this->saveElementorData($tr_post_id, $translation['elementor']);
-                }
                 // set language of the post
                 PLL()->model->post->set_language($tr_post_id, $lang);
 
@@ -119,8 +116,13 @@ class Qordoba_Module_Polylang extends Qordoba_Module
                 PLL()->sync->copy_post_metas($source_id, $tr_post_id, $lang);
 
                 // save translated meta data
-                if (isset($translation['custom_fields']))
+                if (isset($translation['custom_fields'])) {
                     $this->save_translated_meta($tr_post_id, $translation['custom_fields']);
+                }
+
+                if (isset($translation['elementor'])) {
+                    $this->save_elementor_data($tr_post_id, $translation['elementor']);
+                }
             }
         }
 
@@ -139,12 +141,19 @@ class Qordoba_Module_Polylang extends Qordoba_Module
      * @param array $data
      * @return array
      */
-    public function saveElementorData($post_id, $data = [])
+    public function save_elementor_data($post_id, $data = [])
     {
         $elementorPostMeta = get_post_meta($post_id, '_elementor_data');
+        $source_id = $this->get_source_post_id($post_id);
         $elementorData = [];
+        if (!$elementorPostMeta) {
+            $elementorPostMeta = get_post_meta($source_id, '_elementor_data');
+        }
         if (is_array($elementorPostMeta) && isset($elementorPostMeta[0])) {
             $sourceMeta = json_decode($elementorPostMeta[0], true);
+            if (!$sourceMeta) {
+                $sourceMeta = maybe_unserialize($elementorPostMeta[0]);
+            }
             foreach ($data as $key => $value) {
                 $tmp = explode('_', $key);
                 if (isset($tmp[0])) {
@@ -160,7 +169,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module
                 }
             }
             foreach ($elementorData as $dataKey => $dataItem) {
-                $this->recursiveMetaReplays($sourceMeta, $dataKey, $dataItem);
+                $this->recursive_meta_replays($sourceMeta, $dataKey, $dataItem);
             }
             if (0 < count($sourceMeta)) {
                 update_post_meta($post_id, '_elementor_data', $sourceMeta);
@@ -174,7 +183,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module
      * @param $id
      * @param array $replacement
      */
-    private function recursiveMetaReplays(&$source, $id, $replacement = [])
+    private function recursive_meta_replays(&$source, $id, $replacement = [])
     {
         foreach ($source as &$element) {
             if (isset($element['id']) && ($id === $element['id'])) {
@@ -193,15 +202,21 @@ class Qordoba_Module_Polylang extends Qordoba_Module
                 if (isset($replacement['editor'])) {
                     $element['settings']['editor'] = $replacement['editor'];
                 }
+                if (isset($replacement['testimonial_content'])) {
+                    $element['settings']['testimonial_content'] = $replacement['testimonial_content'];
+                }
+                if (isset($replacement['testimonial_name'])) {
+                    $element['settings']['testimonial_name'] = $replacement['testimonial_name'];
+                }
             }
             if (isset($element['elements'])) {
-                $this->recursiveMetaReplays($element['elements'], $id, $replacement);
+                $this->recursive_meta_replays($element['elements'], $id, $replacement);
             }
             if (isset($element[0])) {
-                foreach ($element as $item) {
+                foreach ($element as &$item) {
                     if (isset($item['elements'])) {
                         if (count($item['elements'])) {
-                            $this->recursiveMetaReplays($item['elements'], $id, $replacement);
+                            $this->recursive_meta_replays($item['elements'], $id, $replacement);
                         }
                     }
                 }

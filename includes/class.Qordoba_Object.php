@@ -121,21 +121,17 @@ class Qordoba_Object
         $elementorData = $this->download_document($this->format_custom_field('elementor', $this->version), null, 'json');
         foreach ($fields as $field) {
             $document_name = $this->format_object_field($field);
-
             if (in_array($document_name, $sent_documents)) {
                 $translations = $this->download_document($document_name);
-
                 foreach ($translations as $lang => $translation) {
                     if (!isset($result[$lang])) {
                         $result[$lang] = array();
                     }
-
                     $result[$lang][$field] = trim(wp_kses($translation, wp_kses_allowed_html('post')));
                 }
 
             }
         }
-
         if ($elementorData && 0 < count($elementorData)) {
             foreach ($elementorData as $lang => $translation) {
                 if (!isset($result[$lang])) {
@@ -144,9 +140,7 @@ class Qordoba_Object
                 $result[$lang]['elementor'] = $translation;
             }
         }
-
         $this->download_custom_fields($result);
-
         return $result;
     }
 
