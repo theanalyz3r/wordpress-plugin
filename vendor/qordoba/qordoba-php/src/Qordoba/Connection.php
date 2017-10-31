@@ -160,6 +160,7 @@ class Connection {
       ]
     ];
 
+
     $response   = $this->processRequest('POST', $apiUrl, $options);
     $result     = json_decode($response->getBody()->getContents());
 

@@ -113,8 +113,6 @@ class Project {
       $result[$lang->code] = $this->connection->fetchProjectSearch($this->getProjectId(), $lang->id, $documentName . "." . $type, $status);
     }
 
-    //var_dump($result); die();
-
     if(($languageCode != null && $langsByCode[$languageCode] != null) && isset($result[$languageCode])) {
       return [$languageCode => $result[$languageCode]];
     } else if ($languageCode != null && !isset($result[$languageCode])) {
