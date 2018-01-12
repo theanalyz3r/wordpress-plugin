@@ -1,11 +1,11 @@
 <?php
-/*
- * This file is part of Respect/Validation.
+/**
  *
- * (c) Alexandre Gomes Gaigalas <alexandre@gaigalas.net>
+ * PHP version 5 and 7
  *
- * For the full copyright and license information, please view the "LICENSE.md"
- * file that was distributed with this source code.
+ * @author Qordoba Team <support@qordoba.com>
+ * @copyright 2018 Qordoba Team
+ *
  */
 
 namespace Respect\Validation\Rules;

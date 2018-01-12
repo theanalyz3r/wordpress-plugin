@@ -1,4 +1,12 @@
 <?php
+/**
+ *
+ * PHP version 5 and 7
+ *
+ * @author Qordoba Team <support@qordoba.com>
+ * @copyright 2018 Qordoba Team
+ *
+ */
 
 namespace Qordoba;
 
@@ -159,6 +167,7 @@ class Connection {
         'X-AUTH-TOKEN' => $authToken
       ]
     ];
+
 
     $response   = $this->processRequest('POST', $apiUrl, $options);
     $result     = json_decode($response->getBody()->getContents());
@@ -339,9 +348,13 @@ class Connection {
     ];
 
     $response   = $this->processRequest('GET', $apiUrl, $options);
-    $result     = json_decode($response->getBody()->getContents());
+    $result     = $response->getBody()->getContents();
 
-    return $result;
+    $json       = json_decode($result);
+    if(json_last_error() != JSON_ERROR_NONE) {
+      return $result;
+    }
+    return $json;
   }
 
   private function processRequest($method, $apiUrl, $options) {

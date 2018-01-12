@@ -1,4 +1,12 @@
 <?php
+/**
+ *
+ * PHP version 5 and 7
+ *
+ * @author Qordoba Team <support@qordoba.com>
+ * @copyright 2018 Qordoba Team
+ *
+ */
 
 class Qordoba_Module_Default extends Qordoba_Module {
 
@@ -9,7 +17,7 @@ class Qordoba_Module_Default extends Qordoba_Module {
     $this->translated_taxonomies = array('category', 'post_tag');
   }
 
-  public function save_post_translation($post_id, $lang, $translation) {
+  public function save_post_translation($post_id, $language_code, $translation) {
     return; // nothing to do here
   }
 
