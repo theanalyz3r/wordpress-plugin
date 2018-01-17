@@ -90,7 +90,6 @@ class Qordoba_Module_WPML extends Qordoba_Module {
 		$translated_post_id = $sitepress->get_object_id( $post_id, $source->post_type, false, $language_code );
 		if ( $translated_post_id ) {
 			$translated_post['ID'] = $translated_post_id;
-
 			if ( isset( $translation['elementor'] ) ) {
 				$this->save_elementor_data( $translated_post_id, $translation['elementor'] );
 			}
@@ -113,6 +112,14 @@ class Qordoba_Module_WPML extends Qordoba_Module {
 					$this->get_default_language(),
 					false
 				);
+				$sitepress->copy_custom_fields($source_id, $translated_post_id);
+				if ( isset( $translation['elementor'] ) ) {
+					$this->save_elementor_data( $translated_post_id, $translation['elementor'] );
+				}
+
+				if ( isset( $translation['custom_fields'] ) ) {
+					$this->save_translated_meta( $translated_post_id, $translation['custom_fields'] );
+				}
 			}
 		}
 
