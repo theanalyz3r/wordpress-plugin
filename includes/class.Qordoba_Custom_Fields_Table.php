@@ -123,7 +123,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
 
         echo '<pre>';
-        var_dump($wpdb->get_var( $sql ));
+        var_dump($sql);
         echo '</pre>';
 
 		return $wpdb->get_var( $sql );
