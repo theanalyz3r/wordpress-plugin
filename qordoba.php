@@ -12,7 +12,7 @@
 Plugin Name: Qordoba
 Plugin URI: http://qordoba.com/
 Description: Translate content of your multilingual website with Qordoba.
-Version: 0.1.4
+Version: 0.1.5
 Author: Qordoba
 Author URI: http://qordoba.com
 Text Domain: qordoba
