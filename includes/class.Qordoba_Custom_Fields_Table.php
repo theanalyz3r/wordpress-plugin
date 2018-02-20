@@ -46,11 +46,11 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 	 */
 	protected static function excluded_custom_fields_list( $glue = ',' ) {
 		$list = array(
-			'_edit_last',
-			'_edit_lock',
+//			'_edit_last',
+//			'_edit_lock',
 //			'_pll_strings_translations',
 			'_qor_version',
-			'_thumbnail_id',
+//			'_thumbnail_id',
 //			'_wp_attached_file',
 //			'_wp_attachment_metadata',
 //			'_wp_desired_post_slug',
