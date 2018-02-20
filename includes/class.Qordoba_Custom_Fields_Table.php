@@ -48,26 +48,26 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$list = array(
 			'_edit_last',
 			'_edit_lock',
-			'_pll_strings_translations',
+//			'_pll_strings_translations',
 			'_qor_version',
 			'_thumbnail_id',
-			'_wp_attached_file',
-			'_wp_attachment_metadata',
-			'_wp_desired_post_slug',
-			'_wp_page_template',
-			'_wp_trash_meta_status',
-			'_wp_trash_meta_time',
-			'_pingme',
-			'_encloseme',
-			'_elementor_data',
-			'_elementor_source_image_hash',
-			'_elementor_edit_mode',
-			'_elementor_version',
-			'_elementor_css',
-			'_elementor_template_type',
-			'rule',
-			'position',
-			'hide_on_screen',
+//			'_wp_attached_file',
+//			'_wp_attachment_metadata',
+//			'_wp_desired_post_slug',
+//			'_wp_page_template',
+//			'_wp_trash_meta_status',
+//			'_wp_trash_meta_time',
+//			'_pingme',
+//			'_encloseme',
+//			'_elementor_data',
+//			'_elementor_source_image_hash',
+//			'_elementor_edit_mode',
+//			'_elementor_version',
+//			'_elementor_css',
+//			'_elementor_template_type',
+//			'rule',
+//			'position',
+//			'hide_on_screen',
 		);
 		foreach ( $list as $key => &$item ) {
 			$list[ $key ] = "'{$item}'";
@@ -88,18 +88,21 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 
 		global $wpdb;
 		$offset = ( $page_number - 1 ) * $per_page;
-//        var_dump(self::is_acf_plugin_exist());
+
 		if ( self::is_acf_plugin_exist() ) {
-			$sql = sprintf( 'SELECT meta_key, meta_value FROM %s', $wpdb->postmeta );
+			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s', $wpdb->postmeta);
 		} else {
 			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
-		$sql .= sprintf( ' LIMIT %d OFFSET %d', $per_page, $offset );
+		$sql .= sprintf( ' AND meta_key NOT IN (%s) LIMIT %d OFFSET %d', self::excluded_custom_fields_list(), $per_page, $offset );
 
-		var_dump($sql);
+		  echo '<pre>';
+		  var_dump($wpdb->get_results( $sql, ARRAY_A ));
+		  echo '</pre>';
 
-		return $wpdb->get_results( $sql, ARRAY_A );
+
+		  return $wpdb->get_results( $sql, ARRAY_A );
 	}
 
 
@@ -112,13 +115,17 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		global $wpdb;
 
 		if ( self::is_acf_plugin_exist() ) {
-			$sql = sprintf( 'SELECT COUNT(meta_key, meta_value) FROM %s', $wpdb->postmeta );
+			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE', $wpdb->postmeta );
 		} else {
 			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
-//		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
-		  var_dump($sql);
+		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
+
+        echo '<pre>';
+        var_dump($wpdb->get_var( $sql ));
+        echo '</pre>';
+
 		return $wpdb->get_var( $sql );
 	}
 
@@ -296,9 +303,6 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			'total_items' => self::record_count(),
 			'per_page'    => $per_page
 		) );
-
-		var_dump(self::record_count());
-		var_dump(self::get_custom_fields( $per_page, $current_page ));
 
 		$this->items = self::get_custom_fields( $per_page, $current_page );
 	}
