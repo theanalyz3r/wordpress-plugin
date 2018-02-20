@@ -95,7 +95,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			$sql = sprintf( 'SELECT meta_key, meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
-		$sql .= sprintf( ' LIMIT %d OFFSET %d', $per_page, $offset );
+		$sql .= sprintf( ' LIMIT %d OFFSET %d', 100, 0 );
 
 		  echo '<pre>';
 		  var_dump($wpdb->get_results( $sql, ARRAY_A ));
