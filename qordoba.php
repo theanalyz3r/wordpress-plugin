@@ -25,7 +25,7 @@ if ( ! function_exists( 'add_action' ) ) {
 
 define( 'QORDOBA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'QORDOBA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-define( 'QORDOBA_VERSION', '0.1.4' );
+define( 'QORDOBA_VERSION', '1.0.2' );
 define( 'QORDOBA_API_URL', 'https://app.qordoba.com/api/' );
 
 if ( ! defined( 'PLL_LINGOTEK_AD' ) ) {
