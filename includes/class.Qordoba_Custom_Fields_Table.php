@@ -46,11 +46,11 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 	 */
 	protected static function excluded_custom_fields_list( $glue = ',' ) {
 		$list = array(
-//			'_edit_last',
-//			'_edit_lock',
+			'_edit_last',
+			'_edit_lock',
 //			'_pll_strings_translations',
 			'_qor_version',
-//			'_thumbnail_id',
+			'_thumbnail_id',
 //			'_wp_attached_file',
 //			'_wp_attachment_metadata',
 //			'_wp_desired_post_slug',
@@ -95,10 +95,10 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			$sql = sprintf( 'SELECT meta_key, meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
-		$sql .= sprintf( ' LIMIT %d OFFSET %d', 100, 0 );
+		$sql .= sprintf( ' AND meta_key NOT IN (%s) LIMIT %d OFFSET %d', self::excluded_custom_fields_list(), $per_page, $offset );
 
 		  echo '<pre>';
-		  var_dump($wpdb->get_results( $sql, ARRAY_A ));
+		  var_dump($sql);
 		  echo '</pre>';
 
 
@@ -120,7 +120,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			$sql = sprintf( 'SELECT COUNT(meta_key) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
-//		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
+		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
 
         echo '<pre>';
         var_dump($wpdb->get_var( $sql ));
