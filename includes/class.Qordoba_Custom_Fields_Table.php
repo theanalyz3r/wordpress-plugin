@@ -90,9 +90,9 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$offset = ( $page_number - 1 ) * $per_page;
 
 		if ( self::is_acf_plugin_exist() ) {
-			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s', $wpdb->postmeta);
+			$sql = sprintf( 'SELECT meta_key, meta_value FROM %s', $wpdb->postmeta);
 		} else {
-			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
+			$sql = sprintf( 'SELECT meta_key, meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
 		$sql .= sprintf( ' AND meta_key NOT IN (%s) LIMIT %d OFFSET %d', self::excluded_custom_fields_list(), $per_page, $offset );
@@ -115,9 +115,9 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		global $wpdb;
 
 		if ( self::is_acf_plugin_exist() ) {
-			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE', $wpdb->postmeta );
+			$sql = sprintf( 'SELECT COUNT(meta_key) FROM %s WHERE', $wpdb->postmeta );
 		} else {
-			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
+			$sql = sprintf( 'SELECT COUNT(meta_key) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 		}
 
 		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
