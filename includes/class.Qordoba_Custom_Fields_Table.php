@@ -97,6 +97,8 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 
 		$sql .= sprintf( 'LIMIT %d OFFSET %d', $per_page, $offset );
 
+		var_dump($sql);
+
 		return $wpdb->get_results( $sql, ARRAY_A );
 	}
 
@@ -116,7 +118,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		}
 
 //		$sql .= sprintf( " AND meta_key NOT IN (%s)", self::excluded_custom_fields_list() );
-
+		  var_dump($sql);
 		return $wpdb->get_var( $sql );
 	}
 
