@@ -553,7 +553,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$this->_column_headers = $this->get_column_info();
 
 
-		$per_page     = $this->get_items_per_page( 'fields_per_page', self::ITEMS_PER_PAGE );
+		$per_page     = $this->get_items_per_page( 'fields_per_page', 50 );
 		$current_page = $this->get_pagenum();
 
 		$this->set_pagination_args( array(
