@@ -88,7 +88,7 @@ class Qordoba_Object {
 	 *
 	 * @throws Exception
 	 */
-	public function __construct( $object, $additional_meta = array() ) {
+	public function __construct( $object, array $additional_meta = array() ) {
 
 		if ( $object instanceof WP_Post ) {
 			$this->translated_meta = apply_filters( "qor_translated_{$object->post_type}_meta", qor()->options()->get( 'post_fields' ) );
@@ -352,16 +352,19 @@ class Qordoba_Object {
 	 *
 	 * @return string
 	 */
-	protected function get_key_by_field($meta = array(), $field = '') {
+	protected function get_key_by_field( $meta = array(), $field = '' ) {
 		$translate_field_key = '';
-		if ('' !== $field) {
-			foreach ($meta as $key => $value) {
-				if (isset($value[0]) && ($value[0] === $field)) {
-					$translate_field_key = ltrim($key, self::CUSTOM_FIELD_DIVIDER);
-					break;
+		if ( '' !== $field ) {
+
+			foreach ( $meta as $key => $value ) {
+				if ( isset( $value[0] )
+				     && ( $field === $value[0] )
+				     && ( '' !== ltrim( $key, self::CUSTOM_FIELD_DIVIDER ) ) ) {
+					$translate_field_key = ltrim( $key, self::CUSTOM_FIELD_DIVIDER );
 				}
 			}
 		}
+
 		return $translate_field_key;
 	}
 
@@ -377,7 +380,7 @@ class Qordoba_Object {
 			$this->send_document( $this->format_custom_field( 'elementor', $this->version ), $this->meta, self::OBJECT_DATA_TYPE_JSON );
 		}
 
-		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() ) {
+		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() || Qordoba_Custom_Fields_Table::is_acf_pro_plugin_exist() ) {
 			$meta = $this->get_meta();
 
 			if ( ! $meta || ( 0 === count( $meta ) ) ) {
@@ -388,7 +391,7 @@ class Qordoba_Object {
 			$document->setName( $this->get_custom_fields_document_name() );
 			if ( $this->translated_meta ) {
 				$translate_item_count = 0;
-				$keys = array();
+				$keys                 = array();
 				foreach ( $this->translated_meta as $field ) {
 					$keys[] = $this->get_key_by_field( $meta, $field );
 				}
@@ -404,7 +407,6 @@ class Qordoba_Object {
 					$document->createTranslation();
 				}
 			}
-
 
 
 		} else {
@@ -435,7 +437,7 @@ class Qordoba_Object {
 	protected function download_custom_fields( &$result ) {
 		$meta = $this->get_meta();
 
-		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() ) {
+		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() || Qordoba_Custom_Fields_Table::is_acf_pro_plugin_exist() ) {
 			if ( ! $meta && empty( $result ) ) {
 				return array();
 			}
@@ -445,7 +447,7 @@ class Qordoba_Object {
 				foreach ( $translations as $translation_key => $translation_value ) {
 					$custom_field_key = $this->get_custom_field_key( $translation_key );
 					if ( '' !== $custom_field_key ) {
-						$result[ $lang ]['custom_fields'][ (string) $custom_field_key ] = $translation_value;
+						$result[ $lang ]['custom_fields'][ $custom_field_key ] = $translation_value;
 					}
 				}
 			}
@@ -495,6 +497,10 @@ class Qordoba_Object {
 	 * @return mixed
 	 */
 	public function get_meta( $key = false, $single = false ) {
+		return call_user_func( "get_{$this->object_type}_meta", $this->object_id, $key, $single );
+	}
+
+	public function get_pro_meta( $key = false, $single = false ) {
 		return call_user_func( "get_{$this->object_type}_meta", $this->object_id, $key, $single );
 	}
 
