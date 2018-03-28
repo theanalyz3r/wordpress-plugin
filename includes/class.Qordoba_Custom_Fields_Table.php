@@ -20,7 +20,11 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 	/**
 	 * @const int
 	 */
-	const ITEMS_PER_PAGE = 20;
+	const ITEMS_PER_PAGE = 50;
+	/**
+	 * @const string
+	 */
+	const SEARCH_IDENTIFIER = 's';
 
 	/**
 	 * @var array
@@ -99,14 +103,17 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$offset = ( $page_number - 1 ) * $per_page;
 		if ( self::is_acf_pro_plugin_exist() ) {
 			$sql = sprintf( 'SELECT DISTINCT (post_excerpt) AS meta_key, post_title AS meta_value FROM %s WHERE post_type = \'acf-field\'', $wpdb->posts );
-			$sql .= sprintf( ' LIMIT %d OFFSET %d', $per_page, $offset );
 		} else if ( self::is_acf_plugin_exist() ) {
 			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s', $wpdb->postmeta );
-			$sql .= sprintf( ' WHERE meta_key NOT IN (%s) LIMIT %d OFFSET %d', self::excluded_custom_fields_list(), $per_page, $offset );
+			$sql .= sprintf( ' WHERE meta_key NOT IN (%s)', self::excluded_custom_fields_list() );
 		} else {
 			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
-			$sql .= sprintf( ' WHERE meta_key NOT IN (%s) LIMIT %d OFFSET %d', self::excluded_custom_fields_list(), $per_page, $offset );
+			$sql .= sprintf( ' WHERE meta_key NOT IN (%s)', self::excluded_custom_fields_list() );
 		}
+		if ( isset( $_POST[ self::SEARCH_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_IDENTIFIER ] ) ) {
+			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%')";
+		}
+		$sql .= sprintf( ' LIMIT %d OFFSET %d', $per_page, $offset );
 
 		return $wpdb->get_results( $sql, ARRAY_A );
 	}
@@ -127,6 +134,9 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		} else {
 			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 			$sql .= sprintf( ' meta_key NOT IN (%s)', self::excluded_custom_fields_list() );
+		}
+		if ( isset( $_POST[ self::SEARCH_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_IDENTIFIER ] ) ) {
+			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%')";
 		}
 
 		return $wpdb->get_var( $sql );
@@ -299,7 +309,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 		$this->_column_headers = $this->get_column_info();
 
 
-		$per_page     = $this->get_items_per_page( 'fields_per_page', 50 );
+		$per_page     = $this->get_items_per_page( 'fields_per_page', self::ITEMS_PER_PAGE );
 		$current_page = $this->get_pagenum();
 
 		$this->set_pagination_args( array(
@@ -418,8 +428,13 @@ class SP_Plugin {
                     <div id="post-body-content">
                         <div class="meta-box-sortables ui-sortable">
                             <form method="post">
+                                <?php
+                                    $this->customers_obj->prepare_items();
+                                ?>
+                                <div>
+		                            <?= $this->customers_obj->search_box(__('Search Metas', 'qordoba'), Qordoba_Custom_Fields_Table::SEARCH_IDENTIFIER); ?>
+                                </div>
 								<?php
-								$this->customers_obj->prepare_items();
 								$this->customers_obj->display(); ?>
                             </form>
                         </div>

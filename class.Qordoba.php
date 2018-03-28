@@ -34,7 +34,7 @@ class Qordoba {
 	 */
 	protected $modules = array(
 		'Polylang' => 'Qordoba_Module_Polylang',
-		'WPML'      => 'Qordoba_Module_WPML',
+		'WPML'     => 'Qordoba_Module_WPML',
 	);
 
 	/**
@@ -696,7 +696,7 @@ class Qordoba {
 	 *
 	 * @return array
 	 */
-	public function get_updated_posts( ) {
+	public function get_updated_posts() {
 		$args = array(
 			'fields'         => 'ids',
 			'post_type'      => $this->module()->translated_post_types,

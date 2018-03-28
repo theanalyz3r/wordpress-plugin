@@ -239,10 +239,16 @@ class Qordoba_Options {
 
 		if ( isset( $values['organization_id'] ) ) {
 			$new_values['organization_id'] = absint( $values['organization_id'] );
+			if ( $this->is_option_value_changed('organization_id', $new_values['organization_id']) ) {
+				$this->remove_existing_metas();
+			}
 		}
 
 		if ( isset( $values['project_id'] ) ) {
 			$new_values['project_id'] = absint( $values['project_id'] );
+			if ( $this->is_option_value_changed('project_id', $new_values['project_id']) ) {
+				$this->remove_existing_metas();
+			}
 		}
 
 		$new_values['cron_schedule'] = isset( $values['cron_schedule'] ) ? absint( $values['cron_schedule'] ) : 0;
@@ -270,6 +276,26 @@ class Qordoba_Options {
 		}
 
 		return $new_values;
+	}
+
+	/**
+	 * @param string $name
+	 * @param int $current_value
+	 *
+	 * @return bool
+	 */
+	private function is_option_value_changed( $name, $current_value ) {
+		$options = get_option( 'qordoba_options' );
+
+		return $options && $options[ $name ] && absint($options[ $name ]) !== absint($current_value);
+	}
+
+	/**
+	 *
+	 */
+	private function remove_existing_metas() {
+		global $wpdb;
+		$wpdb->query( "DELETE FROM {$wpdb->postmeta} WHERE meta_key LIKE '_qor%'" );
 	}
 
 	/**
