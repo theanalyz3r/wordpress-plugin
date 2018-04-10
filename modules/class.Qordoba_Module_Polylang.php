@@ -63,6 +63,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 			'post_excerpt' => '',
 			'post_type'    => 'post',
 			'post_status'  => self::POST_STATUS_PENDING,
+			'post_modified' => current_time( 'mysql' ),
 		);
 
 		$translation = wp_parse_args( $translation, $defaults );
@@ -72,7 +73,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 			'post_title'   => $translation['post_title'],
 			'post_content' => $translation['post_content'],
 			'post_excerpt' => $translation['post_excerpt'],
-			'post_type'    => $source->post_type,
+			'post_type'    => $source->post_type
 		);
 
 		if ( $tr_post_id = PLL()->model->post->get( $source_id, $language_code ) ) {
@@ -81,6 +82,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 			PLL()->sync->copy_taxonomies( $source_id, $tr_post_id, $language_code );
 
 			if ( isset( $translation['elementor'] ) ) {
+				delete_post_meta( $tr_post_id, '_elementor_css' );
 				$this->save_elementor_data( $tr_post_id, $translation['elementor'] );
 			}
 
@@ -123,6 +125,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 					$this->save_translated_meta( $tr_post_id, $translation['custom_fields'] );
 				}
 				if ( isset( $translation['elementor'] ) ) {
+					delete_post_meta( $tr_post_id, '_elementor_css' );
 					$this->save_elementor_data( $tr_post_id, $translation['elementor'] );
 				}
 			}
@@ -132,6 +135,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 			wp_update_post( array(
 				'ID'        => $tr_post_id,
 				'post_name' => $source->post_name,
+				'post_modified' => current_time( 'mysql' ),
 			) );
 		}
 
@@ -144,7 +148,7 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 	 *
 	 * @return array
 	 */
-	public function save_elementor_data( $post_id, $data = [] ) {
+	public function save_elementor_data( $post_id, $data = array() ) {
 		$elementorPostMeta = get_post_meta( $post_id, '_elementor_data' );
 		$source_id         = $this->get_source_post_id( $post_id );
 		$elementorData     = array();
@@ -160,7 +164,10 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 				$tmp = explode( '_', $key );
 				if ( isset( $tmp[0] ) ) {
 					$id = $tmp[0];
-					if ( isset( $tmp[1] ) && isset( $tmp[2] ) ) {
+					if (isset( $tmp[1],  $tmp[2],  $tmp[3] )) {
+						$name                          = $tmp[1] . '_' . $tmp[2] . '_' . $tmp[3];
+						$elementorData[ $id ][ $name ] = $value;
+					} else if ( isset( $tmp[1] , $tmp[2] ) ) {
 						$name                          = $tmp[1] . '_' . $tmp[2];
 						$elementorData[ $id ][ $name ] = $value;
 					}
@@ -174,7 +181,9 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 				$this->recursive_meta_replays( $sourceMeta, $dataKey, $dataItem );
 			}
 			if ( 0 < count( $sourceMeta ) ) {
-				update_post_meta( $post_id, '_elementor_data', $sourceMeta );
+				update_post_meta( $post_id, '_elementor_data', wp_slash( wp_json_encode($sourceMeta)) );
+				wp_cache_set( 'last_changed', microtime(), 'posts' );
+
 			}
 		}
 
@@ -188,30 +197,73 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 	 */
 	private function recursive_meta_replays( &$source, $id, $replacement = array() ) {
 		foreach ( $source as &$element ) {
-			if ( isset( $element['id'] ) && ( $id === $element['id'] ) ) {
-				if ( isset( $replacement['title_text'] ) ) {
-					$element['settings']['title_text'] = $replacement['title_text'];
-				}
-				if ( isset( $replacement['text'] ) ) {
-					$element['settings']['text'] = $replacement['text'];
-				}
-				if ( isset( $replacement['title'] ) ) {
-					$element['settings']['title'] = $replacement['title'];
-				}
-				if ( isset( $replacement['description_text'] ) ) {
-					$element['settings']['description_text'] = $replacement['description_text'];
-				}
-				if ( isset( $replacement['editor'] ) ) {
-					$element['settings']['editor'] = $replacement['editor'];
-				}
-				if ( isset( $replacement['testimonial_content'] ) ) {
-					$element['settings']['testimonial_content'] = $replacement['testimonial_content'];
-				}
-				if ( isset( $replacement['html'] ) ) {
-					$element['settings']['html'] = $replacement['html'];
-				}
-				if ( isset( $replacement['testimonial_name'] ) ) {
-					$element['settings']['testimonial_name'] = $replacement['testimonial_name'];
+			if ( isset( $element['id'] ) && ( (string) $id === (string) $element['id'] ) ) {
+				if ( isset( $element['settings']['tabs'] ) && is_array( $element['settings']['tabs'] ) ) {
+					foreach ( $replacement as $replaceKey => $replaceValue ) {
+						$idParts = explode( '_', $replaceKey );
+						if ( isset( $idParts[0] ) ) {
+							$id  = (string) $idParts[0];
+							$key = $idParts[1] . '_' . $idParts[2];
+							foreach ( $element['settings']['tabs'] as $tabKey => $tab ) {
+								if ( (string)$tab['_id'] === (string)$id ) {
+									$element['settings']['tabs'][ $tabKey ][ $key ] = $replaceValue;
+								}
+							}
+						}
+					}
+				} else if ( isset( $element['settings']['icon_list'] ) && is_array( $element['settings']['icon_list'] ) ) {
+					foreach ( $replacement as $replaceKey => $replaceValue ) {
+						$idParts = explode( '_', $replaceKey );
+						if ( isset( $idParts[0] ) ) {
+							$id  = (string) $idParts[0];
+							$key = $idParts[1];
+							foreach ( $element['settings']['icon_list'] as $tabKey => $tab ) {
+								if ( (string)$tab['_id'] === (string)$id ) {
+									$element['settings']['icon_list'][ $tabKey ][ $key ] = $replaceValue;
+								}
+							}
+						}
+					}
+				} else {
+					if ( isset( $replacement['title_text'] ) ) {
+						$element['settings']['title_text'] = $replacement['title_text'];
+					}
+					if ( isset( $replacement['text'] ) ) {
+						$element['settings']['text'] = $replacement['text'];
+					}
+					if ( isset( $replacement['title'] ) ) {
+						$element['settings']['title'] = $replacement['title'];
+					}
+					if ( isset( $replacement['description_text'] ) ) {
+						$element['settings']['description_text'] = $replacement['description_text'];
+					}
+					if ( isset( $replacement['editor'] ) ) {
+						$element['settings']['editor'] = $replacement['editor'];
+					}
+					if ( isset( $replacement['testimonial_content'] ) ) {
+						$element['settings']['testimonial_content'] = $replacement['testimonial_content'];
+					}
+					if ( isset( $replacement['html'] ) ) {
+						$element['settings']['html'] = $replacement['html'];
+					}
+					if ( isset( $replacement['testimonial_name'] ) ) {
+						$element['settings']['testimonial_name'] = $replacement['testimonial_name'];
+					}
+					if ( isset( $replacement['title_text_a'] ) ) {
+						$element['settings']['title_text_a'] = $replacement['title_text_a'];
+					}
+					if ( isset( $replacement['description_text_a'] ) ) {
+						$element['settings']['description_text_a'] = $replacement['description_text_a'];
+					}
+					if ( isset( $replacement['title_text_b'] ) ) {
+						$element['settings']['title_text_b'] = $replacement['title_text_b'];
+					}
+					if ( isset( $replacement['description_text_b'] ) ) {
+						$element['settings']['description_text_b'] = $replacement['description_text_b'];
+					}
+					if ( isset( $replacement['button_text'] ) ) {
+						$element['settings']['button_text'] = $replacement['button_text'];
+					}
 				}
 			}
 			if ( isset( $element['elements'] ) ) {
@@ -412,19 +464,19 @@ class Qordoba_Module_Polylang extends Qordoba_Module {
 				$values = array( $values );
 			}
 
-			if ( Qordoba_Object::OBJECT_TYPE_POST == $object_type ) {
+			if ( Qordoba_Object::OBJECT_TYPE_POST === $object_type ) {
 				get_post_meta( $tr_id, $key );
 
 				delete_post_meta( $tr_id, $key );
-			} elseif ( Qordoba_Object::OBJECT_TYPE_TERM == $object_type ) {
+			} elseif ( Qordoba_Object::OBJECT_TYPE_TERM === $object_type ) {
 				get_term_meta( $tr_id, $key );
 				delete_term_meta( $tr_id, $key );
 			}
 
 			foreach ( $values as $index => $value ) {
-				if ( Qordoba_Object::OBJECT_TYPE_POST == $object_type ) {
+				if ( Qordoba_Object::OBJECT_TYPE_POST === $object_type ) {
 					add_post_meta( $tr_id, $key, $value, true );
-				} elseif ( Qordoba_Object::OBJECT_TYPE_TERM == $object_type ) {
+				} elseif ( Qordoba_Object::OBJECT_TYPE_TERM === $object_type ) {
 					add_term_meta( $tr_id, $key, $value );
 				}
 			}

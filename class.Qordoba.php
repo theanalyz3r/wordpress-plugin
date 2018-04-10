@@ -18,7 +18,10 @@ class Qordoba {
 	 * @var Qordoba
 	 */
 	private static $instance;
-
+	/**
+	 * @var null|Qordoba_Actions
+	 */
+	public $actions = null;
 	/**
 	 * @var null
 	 */
@@ -28,7 +31,6 @@ class Qordoba {
 	 * @var false|Qordoba_Options
 	 */
 	protected $options;
-
 	/**
 	 * @var array
 	 */
@@ -36,16 +38,10 @@ class Qordoba {
 		'Polylang' => 'Qordoba_Module_Polylang',
 		'WPML'     => 'Qordoba_Module_WPML',
 	);
-
 	/**
 	 * @var Document
 	 */
 	protected $_api = null;
-
-	/**
-	 * @var null|Qordoba_Actions
-	 */
-	public $actions = null;
 
 	/**
 	 * Qordoba constructor.
@@ -57,12 +53,6 @@ class Qordoba {
 
 		$this->options = new Qordoba_Options();
 		$this->actions = new Qordoba_Actions();
-	}
-
-	/**
-	 *
-	 */
-	private function __clone() {
 	}
 
 	/**
@@ -108,13 +98,6 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba_Options
-	 */
-	public function options() {
-		return $this->options;
-	}
-
-	/**
 	 * @return bool
 	 */
 	public function get_project_language() {
@@ -122,48 +105,8 @@ class Qordoba {
 
 		if ( $project ) {
 			return $this->map_qordoba_lang( $project->source_language->code );
-		} else {
-			return false;
 		}
-	}
-
-	/**
-	 * @return null|Qordoba_Module_Default
-	 */
-	public function module() {
-		return $this->load_module();
-	}
-
-	/**
-	 * @return array
-	 */
-	public function get_modules() {
-		return $this->modules;
-	}
-
-	/**
-	 * @return null|Document
-	 * @throws Exception
-	 */
-	public function api() {
-		if ( null !== $this->_api ) {
-			return $this->_api;
-		}
-
-		return $this->_api = $this->new_qordoba_document();
-	}
-
-	/**
-	 * @return array
-	 */
-	public function get_project_languages() {
-		$project_meta = $this->get_project_meta_data();
-
-		if ( is_object( $project_meta ) && property_exists( $project_meta, 'target_languages' ) ) {
-			return $this->get_project_meta_data()->target_languages;
-		}
-
-		return array();
+		return false;
 	}
 
 	/**
@@ -190,20 +133,22 @@ class Qordoba {
 	}
 
 	/**
-	 * @param null $object_id
-	 * @param string $object_type
-	 *
-	 * @return bool
-	 */
-	public function current_user_can_translate( $object_id = null, $object_type = 'post' ) {
-		return current_user_can( 'manage_options' );
-	}
-
-	/**
 	 * @return bool
 	 */
 	public function qordoba_api_configured() {
 		return $this->options->get( 'login' ) && $this->options->get( 'password' ) && $this->options->get( 'project_id' ) && $this->options->get( 'organization_id' );
+	}
+
+	/**
+	 * @return null|Document
+	 * @throws Exception
+	 */
+	public function api() {
+		if ( null !== $this->_api ) {
+			return $this->_api;
+		}
+
+		return $this->_api = $this->new_qordoba_document();
 	}
 
 	/**
@@ -249,6 +194,36 @@ class Qordoba {
 	}
 
 	/**
+	 * @return array
+	 */
+	public function get_modules() {
+		return $this->modules;
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_project_languages() {
+		$project_meta = $this->get_project_meta_data();
+
+		if ( is_object( $project_meta ) && property_exists( $project_meta, 'target_languages' ) ) {
+			return $this->get_project_meta_data()->target_languages;
+		}
+
+		return array();
+	}
+
+	/**
+	 * @param null $object_id
+	 * @param string $object_type
+	 *
+	 * @return bool
+	 */
+	public function current_user_can_translate( $object_id = null, $object_type = 'post' ) {
+		return current_user_can( 'manage_options' );
+	}
+
+	/**
 	 * @param $module_lang
 	 *
 	 * @return bool
@@ -264,283 +239,19 @@ class Qordoba {
 	}
 
 	/**
-	 * @param $post_id
-	 * @param bool $languages
-	 *
 	 * @return bool
 	 */
-	public function send_post( $post_id, $languages = false ) {
-		$flatMetaData = array();
-		$source_id    = $this->module()->get_source_post_id( $post_id );
-		$source_post  = get_post( $source_id );
+	public function cron_job_ready() {
+		$cron_period = max( HOUR_IN_SECONDS, qor()->options()->get( 'cron_schedule' ) );
 
-		if ( ! $source_id || ! $source_post || is_wp_error( $source_post ) ) {
-			return false;
-		}
-
-		if ( $this->is_elementor_plugin_exists() ) {
-
-			$meta     = $this->get_post_meta_data( $post_id );
-			$metaData = array();
-
-			if ( is_array( $meta ) && 0 < count( $meta ) ) {
-
-				foreach ( $meta as $item ) {
-					$itemData     = is_string( $item ) ? json_decode( $item, true ) : $item;
-					$metaData[]   = $this->recursive_meta_parser( $itemData );
-					$flatMetaData = call_user_func_array( 'array_merge', $metaData );
-				}
-				$object = new Qordoba_Object( $source_post, $this->prepare_meta_data( $flatMetaData ) );
-				$object->upload();
-
-			} else {
-				$object = new Qordoba_Object( $source_post );
-				$object->upload();
-			}
-		} else {
-			$object = new Qordoba_Object( $source_post );
-			$object->upload();
-		}
-
-		update_post_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
-		delete_post_meta( $source_id, '_qor_updated' );
+		return ! $this->doing_automatic_translation() && current_time( 'timestamp' ) > $this->get_lock() + $cron_period;
 	}
 
 	/**
-	 * @param array $elements
-	 *
-	 * @return array
+	 * @return null|Qordoba_Options
 	 */
-	private function prepare_meta_data( $elements = array() ) {
-		$qordoba_meta_data = array();
-		foreach ( $elements as $id => $item ) {
-			if ( isset( $item['title'] ) ) {
-				$qordoba_meta_data[ $id . "_title" ] = trim( strip_tags( $item['title'] ) );
-			}
-			if ( isset( $item['title_text'] ) ) {
-				$qordoba_meta_data[ $id . "_title_text" ] = trim( $item['title_text'] );
-			}
-			if ( isset( $item['text'] ) ) {
-				$qordoba_meta_data[ $id . "_text" ] = trim( $item['text'] );
-			}
-			if ( isset( $item['description_text'] ) ) {
-				$qordoba_meta_data[ $id . "_description_text" ] = trim( $item['description_text'] );
-			}
-			if ( isset( $item['description'] ) ) {
-				$qordoba_meta_data[ $id . "_description" ] = trim( $item['description'] );
-			}
-			if ( isset( $item['editor'] ) ) {
-				$qordoba_meta_data[ $id . "_editor" ] = trim( $item['editor'] );
-			}
-			if ( isset( $item['testimonial_name'] ) ) {
-				$qordoba_meta_data[ $id . "_testimonial_name" ] = trim( strip_tags( $item['testimonial_name'] ) );
-			}
-			if ( isset( $item['testimonial_content'] ) ) {
-				$qordoba_meta_data[ $id . "_testimonial_content" ] = trim( $item['testimonial_content'] );
-			}
-			if ( isset( $item['html'] ) ) {
-				$qordoba_meta_data[ $id . "_html" ] = trim( $item['html'] );
-			}
-		}
-
-		return $qordoba_meta_data;
-	}
-
-	/**
-	 * @param array $element
-	 * @param array $elementsData
-	 *
-	 * @return array
-	 */
-	private function recursive_meta_parser( $element = array(), $elementsData = array() ) {
-		foreach ( $element as $item ) {
-			if ( isset( $item['settings']['title'] ) ) {
-				$elementsData[ $item['id'] ]['title'] = $item['settings']['title'];
-			}
-			if ( isset( $item['settings']['title_text'] ) ) {
-				$elementsData[ $item['id'] ]['title_text'] = $item['settings']['title_text'];
-			}
-			if ( isset( $item['settings']['text'] ) ) {
-				$elementsData[ $item['id'] ]['text'] = $item['settings']['text'];
-			}
-			if ( isset( $item['settings']['description_text'] ) ) {
-				$elementsData[ $item['id'] ]['description_text'] = $item['settings']['description_text'];
-			}
-			if ( isset( $item['settings']['description'] ) ) {
-				$elementsData[ $item['id'] ]['description'] = $item['settings']['description'];
-			}
-			if ( isset( $item['settings']['editor'] ) ) {
-				$elementsData[ $item['id'] ]['editor'] = $item['settings']['editor'];
-			}
-			if ( isset( $item['settings']['testimonial_content'] ) ) {
-				$elementsData[ $item['id'] ]['testimonial_content'] = $item['settings']['testimonial_content'];
-			}
-			if ( isset( $item['settings']['testimonial_name'] ) ) {
-				$elementsData[ $item['id'] ]['testimonial_name'] = $item['settings']['testimonial_name'];
-			}
-			if ( isset( $item['settings']['html'] ) ) {
-				$elementsData[ $item['id'] ]['html'] = $item['settings']['html'];
-			}
-			if ( isset( $item['elements'] ) && ( 0 < count( $item['elements'] ) ) ) {
-				$elementsData = $this->recursive_meta_parser( $item['elements'], $elementsData );
-			}
-		}
-
-		return $elementsData;
-	}
-
-	/**
-	 * @return bool
-	 */
-	private function is_elementor_plugin_exists() {
-		return defined( 'ELEMENTOR_VERSION' );
-	}
-
-	/**
-	 * @param $post_id
-	 * @param string $metaKey
-	 *
-	 * @return mixed
-	 */
-	private function get_post_meta_data( $post_id, $metaKey = '_elementor_data' ) {
-		return get_post_meta( $post_id, $metaKey );
-	}
-
-	/**
-	 * @param $post_id
-	 * @param bool $languages
-	 * @param bool $override
-	 *
-	 * @return bool|false|ID|int
-	 * @throws Exception
-	 */
-	public function download_post( $post_id, $languages = false, $override = false ) {
-		remove_action( 'post_updated', 'wp_save_post_revision' );
-		$source_id   = $this->module()->get_source_post_id( $post_id );
-		$source_post = get_post( $source_id );
-
-		if ( ! $source_id || ! $source_post || is_wp_error( $source_post ) ) {
-			return false;
-		}
-
-		$object       = new Qordoba_Object( $source_post );
-		$translations = $object->download();
-		$new_version  = (int) $object->get_version();
-
-
-		foreach ( $translations as $lang => $translation ) {
-			$lang          = $this->map_qordoba_lang( $lang );
-			$saved_version = (int) get_post_meta( $source_id, "_qor_version_$lang", true );
-
-			if ( $lang && ( $override || $saved_version < $new_version ) ) {
-				$translation_id = $this->module()->save_post_translation( $source_id, $lang, $translation );
-
-				if ( $translation_id && $new_version ) {
-					update_post_meta( $source_id, "_qor_version_$lang", $new_version );
-				}
-			}
-		}
-
-		if ( $this->translated_versions_match( $source_id, 'post' ) ) {
-			delete_post_meta( $source_id, '_qor_queued' );
-			delete_post_meta( $source_id, '_qor_updated' );
-		} else {
-			update_post_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
-		}
-		add_action( 'post_updated', 'wp_save_post_revision' );
-
-		return $source_id;
-	}
-
-	/**
-	 * @param $term_id
-	 *
-	 * @return bool
-	 */
-	public function send_term( $term_id ) {
-		$source_id   = $this->module()->get_source_term_id( $term_id );
-		$source_term = get_term( $source_id );
-
-		if ( ! $source_id || ! $source_term || is_wp_error( $source_term ) ) {
-			return false;
-		}
-
-		$object = new Qordoba_Object( $source_term );
-		$object->upload();
-
-		update_term_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
-		delete_term_meta( $source_id, '_qor_updated' );
-	}
-
-	/**
-	 * @param $term_id
-	 * @param bool $languages
-	 * @param bool $override
-	 *
-	 * @return bool
-	 * @throws Exception
-	 */
-	public function download_term( $term_id, $languages = false, $override = false ) {
-		$source_id   = $this->module()->get_source_term_id( $term_id );
-		$source_term = get_term( $source_id );
-
-		if ( ! $source_id || ! $source_term || is_wp_error( $source_term ) ) {
-			return false;
-		}
-
-		$object       = new Qordoba_Object( $source_term );
-		$translations = $object->download();
-		$new_version  = (int) $object->get_version();
-
-		foreach ( $translations as $lang => $translation ) {
-			$lang          = $this->map_qordoba_lang( $lang );
-			$saved_version = (int) get_term_meta( $source_id, "_qor_version_$lang", true );
-
-			if ( $lang && ( $override || $saved_version < $new_version ) ) {
-				$translation_id = $this->module()->save_term_translation( $source_id, $lang, $translation );
-
-				if ( $translation_id && $object->get_version() ) {
-					update_term_meta( $source_id, "_qor_version_$lang", $object->get_version() );
-				}
-			}
-		}
-
-		if ( $this->translated_versions_match( $source_id, 'term' ) ) {
-			delete_term_meta( $source_id, '_qor_queued' );
-			delete_term_meta( $source_id, '_qor_updated' );
-		} else {
-			update_term_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
-		}
-
-		return $source_id;
-	}
-
-	/**
-	 * @param $object_id
-	 * @param string $object_type
-	 *
-	 * @return bool
-	 * @throws Exception
-	 */
-	public function translated_versions_match( $object_id, $object_type = 'post' ) {
-		if ( $object_type == 'post' ) {
-			$meta = get_post_meta( $object_id );
-		} elseif ( 'term' == $object_type ) {
-			$meta = get_term_meta( $object_id );
-		} else {
-			throw new Exception( "Wrong object type $object_type, excpected either post or term" );
-		}
-
-		$versions  = array();
-		$version   = isset( $meta['_qor_version'] ) ? (int) reset( $meta['_qor_version'] ) : 0;
-		$languages = $this->module()->get_site_languages( false );
-
-		foreach ( $languages as $l ) {
-			$key        = sprintf( '_qor_version_%s', $l['id'] );
-			$versions[] = isset( $meta[ $key ] ) ? (int) reset( $meta[ $key ] ) : 0;
-		}
-
-		return empty( $versions ) ? false : $version <= array_sum( $versions ) / count( $versions );
+	public function options() {
+		return $this->options;
 	}
 
 	/**
@@ -558,26 +269,6 @@ class Qordoba {
 	}
 
 	/**
-	 * @return bool
-	 */
-	public function cron_job_ready() {
-		$cron_period = max( HOUR_IN_SECONDS, qor()->options()->get( 'cron_schedule' ) );
-
-		return ! $this->doing_automatic_translation() && current_time( 'timestamp' ) > $this->get_lock() + $cron_period;
-	}
-
-	/**
-	 * @param $expires
-	 *
-	 * @return bool
-	 */
-	protected function set_lock( $expires ) {
-		$expires = (int) $expires;
-
-		return update_option( '_qor_lock', $expires );
-	}
-
-	/**
 	 * @param int $max_time
 	 * @param int $max_items
 	 * @param bool $timestamp
@@ -585,7 +276,11 @@ class Qordoba {
 	 * @return array
 	 * @throws Exception
 	 */
-	public function download_pending_translations( $max_time = MINUTE_IN_SECONDS, $max_items = 50, $timestamp = false ) {
+	public function download_pending_translations(
+		$max_time = MINUTE_IN_SECONDS,
+		$max_items = 50,
+		$timestamp = false
+	) {
 		$safe_extra_time = 5 * MINUTE_IN_SECONDS;
 
 		// increase execution time, has no effect if PHP is running in safe mode!
@@ -595,7 +290,8 @@ class Qordoba {
 		$lock_expires = $this->get_lock();
 
 		if ( $start < $lock_expires ) {
-			throw new Exception( sprintf( 'Another process has started downloading translations (please wait %d seconds)', $lock_expires - $start ) );
+			throw new Exception( sprintf( 'Another process has started downloading translations (please wait %d seconds)',
+				$lock_expires - $start ) );
 		}
 
 		$new_lock_expires = $start + $max_time + $safe_extra_time;
@@ -646,6 +342,193 @@ class Qordoba {
 		$this->set_lock( current_time( 'timestamp' ) );
 
 		return $result;
+	}
+
+	/**
+	 * @param $expires
+	 *
+	 * @return bool
+	 */
+	protected function set_lock( $expires ) {
+		$expires = (int) $expires;
+
+		return update_option( '_qor_lock', $expires );
+	}
+
+	/**
+	 * @param int $count
+	 * @param bool $timestamp
+	 *
+	 * @return array
+	 */
+	public function get_queued_posts( $count = - 1, $timestamp = false ) {
+		$args = array(
+			'fields'         => 'ids',
+			'post_type'      => $this->module()->translated_post_types,
+			'posts_per_page' => $count,
+			'meta_key'       => '_qor_queued',
+			'orderby'        => 'meta_value_num',
+			'order'          => 'ASC',
+		);
+
+		if ( $timestamp ) {
+			$args['meta_value']   = (int) $timestamp;
+			$args['meta_compare'] = '<';
+		}
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_posts_by_lang( $lang, $args );
+	}
+
+	/**
+	 * @return null|Qordoba_Module_Default
+	 */
+	public function module() {
+		return $this->load_module();
+	}
+
+	/**
+	 * @param int $number
+	 * @param bool $timestamp
+	 *
+	 * @return array|int|WP_Error
+	 */
+	public function get_queued_terms( $number = 0, $timestamp = false ) {
+		$args = array(
+			'taxonomy' => $this->module()->translated_taxonomies,
+			'fields'   => 'ids',
+			'number'   => $number,
+			'meta_key' => '_qor_queued',
+			'orderby'  => 'meta_value_num',
+			'order'    => 'ASC',
+		);
+
+		if ( $timestamp ) {
+			$args['meta_value']   = (int) $timestamp;
+			$args['meta_compare'] = '<';
+		}
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_terms_by_lang( $lang, $args );
+	}
+
+	/**
+	 * @param $post_id
+	 * @param bool $languages
+	 * @param bool $override
+	 *
+	 * @return bool|false|ID|int
+	 * @throws Exception
+	 */
+	public function download_post( $post_id, $languages = false, $override = false ) {
+		remove_action( 'post_updated', 'wp_save_post_revision' );
+		$source_id   = $this->module()->get_source_post_id( $post_id );
+		$source_post = get_post( $source_id );
+
+		if ( ! $source_id || ! $source_post || is_wp_error( $source_post ) ) {
+			return false;
+		}
+
+		$object       = new Qordoba_Object( $source_post );
+		$translations = $object->download();
+		$new_version  = (int) $object->get_version();
+
+
+		foreach ( $translations as $lang => $translation ) {
+			$lang          = $this->map_qordoba_lang( $lang );
+			$saved_version = (int) get_post_meta( $source_id, "_qor_version_$lang", true );
+
+			if ( $lang && ( $override || $saved_version < $new_version ) ) {
+				$translation_id = $this->module()->save_post_translation( $source_id, $lang, $translation );
+
+				if ( $translation_id && $new_version ) {
+					update_post_meta( $source_id, "_qor_version_$lang", $new_version );
+				}
+			}
+		}
+
+		if ( $this->translated_versions_match( $source_id, 'post' ) ) {
+			delete_post_meta( $source_id, '_qor_queued' );
+			delete_post_meta( $source_id, '_qor_updated' );
+		} else {
+			update_post_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
+		}
+		add_action( 'post_updated', 'wp_save_post_revision' );
+
+		return $source_id;
+	}
+
+	/**
+	 * @param $object_id
+	 * @param string $object_type
+	 *
+	 * @return bool
+	 * @throws Exception
+	 */
+	public function translated_versions_match( $object_id, $object_type = 'post' ) {
+		if ( $object_type == 'post' ) {
+			$meta = get_post_meta( $object_id );
+		} elseif ( 'term' == $object_type ) {
+			$meta = get_term_meta( $object_id );
+		} else {
+			throw new Exception( "Wrong object type $object_type, excpected either post or term" );
+		}
+
+		$versions  = array();
+		$version   = isset( $meta['_qor_version'] ) ? (int) reset( $meta['_qor_version'] ) : 0;
+		$languages = $this->module()->get_site_languages( false );
+
+		foreach ( $languages as $l ) {
+			$key        = sprintf( '_qor_version_%s', $l['id'] );
+			$versions[] = isset( $meta[ $key ] ) ? (int) reset( $meta[ $key ] ) : 0;
+		}
+
+		return empty( $versions ) ? false : $version <= array_sum( $versions ) / count( $versions );
+	}
+
+	/**
+	 * @param $term_id
+	 * @param bool $languages
+	 * @param bool $override
+	 *
+	 * @return bool
+	 * @throws Exception
+	 */
+	public function download_term( $term_id, $languages = false, $override = false ) {
+		$source_id   = $this->module()->get_source_term_id( $term_id );
+		$source_term = get_term( $source_id );
+
+		if ( ! $source_id || ! $source_term || is_wp_error( $source_term ) ) {
+			return false;
+		}
+
+		$object       = new Qordoba_Object( $source_term );
+		$translations = $object->download();
+		$new_version  = (int) $object->get_version();
+
+		foreach ( $translations as $lang => $translation ) {
+			$lang          = $this->map_qordoba_lang( $lang );
+			$saved_version = (int) get_term_meta( $source_id, "_qor_version_$lang", true );
+
+			if ( $lang && ( $override || $saved_version < $new_version ) ) {
+				$translation_id = $this->module()->save_term_translation( $source_id, $lang, $translation );
+
+				if ( $translation_id && $object->get_version() ) {
+					update_term_meta( $source_id, "_qor_version_$lang", $object->get_version() );
+				}
+			}
+		}
+
+		if ( $this->translated_versions_match( $source_id, 'term' ) ) {
+			delete_term_meta( $source_id, '_qor_queued' );
+			delete_term_meta( $source_id, '_qor_updated' );
+		} else {
+			update_term_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
+		}
+
+		return $source_id;
 	}
 
 	/**
@@ -705,7 +588,7 @@ class Qordoba {
 				'relation' => 'OR',
 				array(
 					'key'     => '_qor_version',
-					'compare' => 'NOT EXISTS'
+					'compare' => 'NOT EXISTS',
 				),
 				array(
 					'key'     => '_qor_updated',
@@ -734,7 +617,7 @@ class Qordoba {
 				'relation' => 'OR',
 				array(
 					'key'     => '_qor_version',
-					'compare' => 'NOT EXISTS'
+					'compare' => 'NOT EXISTS',
 				),
 				array(
 					'key'     => '_qor_updated',
@@ -749,55 +632,225 @@ class Qordoba {
 	}
 
 	/**
-	 * @param int $count
-	 * @param bool $timestamp
+	 * @param $post_id
+	 * @param bool $languages
 	 *
-	 * @return array
+	 * @return bool
+	 * @throws Exception
 	 */
-	public function get_queued_posts( $count = - 1, $timestamp = false ) {
-		$args = array(
-			'fields'         => 'ids',
-			'post_type'      => $this->module()->translated_post_types,
-			'posts_per_page' => $count,
-			'meta_key'       => '_qor_queued',
-			'orderby'        => 'meta_value_num',
-			'order'          => 'ASC',
-		);
+	public function send_post( $post_id, $languages = false ) {
+		$flatMetaData = array();
+		$source_id    = $this->module()->get_source_post_id( $post_id );
+		$source_post  = get_post( $source_id );
 
-		if ( $timestamp ) {
-			$args['meta_value']   = (int) $timestamp;
-			$args['meta_compare'] = '<';
+		if ( ! $source_id || ! $source_post || is_wp_error( $source_post ) ) {
+			return false;
 		}
 
-		$lang = $this->module()->get_default_language( 'slug' );
+		if ( $this->is_elementor_plugin_exists() ) {
 
-		return $this->module()->get_posts_by_lang( $lang, $args );
+			$meta     = $this->get_post_meta_data( $post_id );
+			$metaData = array();
+
+			if ( is_array( $meta ) && 0 < count( $meta ) ) {
+
+				foreach ( $meta as $item ) {
+					$itemData     = is_string( $item ) ? json_decode( $item, true ) : $item;
+					$metaData[]   = $this->recursive_meta_parser( $itemData );
+					$flatMetaData = call_user_func_array( 'array_merge', $metaData );
+				}
+				$object = new Qordoba_Object( $source_post, $this->prepare_meta_data( $flatMetaData ) );
+				$object->upload();
+
+			} else {
+				$object = new Qordoba_Object( $source_post );
+				$object->upload();
+			}
+		} else {
+			$object = new Qordoba_Object( $source_post );
+			$object->upload();
+		}
+
+		update_post_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
+		delete_post_meta( $source_id, '_qor_updated' );
 	}
 
 	/**
-	 * @param int $number
-	 * @param bool $timestamp
-	 *
-	 * @return array|int|WP_Error
+	 * @return bool
 	 */
-	public function get_queued_terms( $number = 0, $timestamp = false ) {
-		$args = array(
-			'taxonomy' => $this->module()->translated_taxonomies,
-			'fields'   => 'ids',
-			'number'   => $number,
-			'meta_key' => '_qor_queued',
-			'orderby'  => 'meta_value_num',
-			'order'    => 'ASC',
-		);
+	private function is_elementor_plugin_exists() {
+		return defined( 'ELEMENTOR_VERSION' );
+	}
 
-		if ( $timestamp ) {
-			$args['meta_value']   = (int) $timestamp;
-			$args['meta_compare'] = '<';
+	/**
+	 * @param $post_id
+	 * @param string $metaKey
+	 *
+	 * @return mixed
+	 */
+	private function get_post_meta_data( $post_id, $metaKey = '_elementor_data' ) {
+		return get_post_meta( $post_id, $metaKey );
+	}
+
+	/**
+	 * @param array $element
+	 * @param array $elementsData
+	 *
+	 * @return array
+	 */
+	private function recursive_meta_parser( $element = array(), $elementsData = array() ) {
+		foreach ( $element as $item ) {
+			if (!isset($elementsData[ $item['id'] ])) {
+				if ( isset( $item['settings']['title'] ) ) {
+					$elementsData[ (string)$item['id'] ]['title'] = $item['settings']['title'];
+				}
+				if ( isset( $item['settings']['title_text'] ) ) {
+					$elementsData[ $item['id'] ]['title_text'] = $item['settings']['title_text'];
+				}
+				if ( isset( $item['settings']['text'] ) ) {
+					$elementsData[ $item['id'] ]['text'] = $item['settings']['text'];
+				}
+				if ( isset( $item['settings']['description_text'] ) ) {
+					$elementsData[ $item['id'] ]['description_text'] = $item['settings']['description_text'];
+				}
+				if ( isset( $item['settings']['description'] ) ) {
+					$elementsData[ $item['id'] ]['description'] = $item['settings']['description'];
+				}
+				if ( isset( $item['settings']['editor'] ) ) {
+					$elementsData[ $item['id'] ]['editor'] = $item['settings']['editor'];
+				}
+				if ( isset( $item['settings']['testimonial_content'] ) ) {
+					$elementsData[ $item['id'] ]['testimonial_content'] = $item['settings']['testimonial_content'];
+				}
+				if ( isset( $item['settings']['testimonial_name'] ) ) {
+					$elementsData[ $item['id'] ]['testimonial_name'] = $item['settings']['testimonial_name'];
+				}
+				if ( isset( $item['settings']['html'] ) ) {
+					$elementsData[ $item['id'] ]['html'] = $item['settings']['html'];
+				}
+				if ( isset( $item['settings']['title_text_a'] ) ) {
+					$elementsData[ $item['id'] ]['title_text_a'] = $item['settings']['title_text_a'];
+				}
+				if ( isset( $item['settings']['description_text_a'] ) ) {
+					$elementsData[ $item['id'] ]['description_text_a'] = $item['settings']['description_text_a'];
+				}
+				if ( isset( $item['settings']['title_text_b'] ) ) {
+					$elementsData[ $item['id'] ]['title_text_b'] = $item['settings']['title_text_b'];
+				}
+				if ( isset( $item['settings']['description_text_b'] ) ) {
+					$elementsData[ $item['id'] ]['description_text_b'] = $item['settings']['description_text_b'];
+				}
+				if ( isset( $item['settings']['button_text'] ) ) {
+					$elementsData[ $item['id'] ]['button_text'] = $item['settings']['button_text'];
+				}
+				if ( isset( $item['settings']['tabs'] ) && is_array( $item['settings']['tabs'] ) ) {
+					foreach ( $item['settings']['tabs'] as $tab ) {
+						if ( isset( $tab['_id'] ) ) {
+							if ( isset( $tab['tab_title'] ) ) {
+								$elementsData[ $item['id'] . '_' . $tab['_id'] ] ['tab_title'] = $tab['tab_title'];
+							}
+							if ( isset( $tab['tab_content'] ) ) {
+								$elementsData[ $item['id'] . '_' . $tab['_id'] ] ['tab_content'] = $tab['tab_content'];
+							}
+						}
+					}
+				}
+				if ( isset( $item['settings']['icon_list'] ) && is_array( $item['settings']['icon_list'] ) ) {
+					foreach ( $item['settings']['icon_list'] as $icon ) {
+						if ( isset( $icon['_id'] ) && isset( $icon['text'] )) {
+							$elementsData[ $item['id'] . '_' . $icon['_id'] ] ['text'] = $icon['text'];
+						}
+					}
+				}
+				if ( isset( $item['elements'] ) && ( 0 < count( $item['elements'] ) ) ) {
+					$elementsData = $this->recursive_meta_parser( $item['elements'], $elementsData );
+				}
+			}
 		}
 
-		$lang = $this->module()->get_default_language( 'slug' );
+		return $elementsData;
+	}
 
-		return $this->module()->get_terms_by_lang( $lang, $args );
+	/**
+	 * @param array $elements
+	 *
+	 * @return array
+	 */
+	private function prepare_meta_data( $elements = array() ) {
+		$qordoba_meta_data = array();
+		foreach ( $elements as $id => $item ) {
+			if ( isset( $item['title'] ) ) {
+				$qordoba_meta_data[ $id . '_title' ] = trim( strip_tags( $item['title'] ) );
+			}
+			if ( isset( $item['title_text'] ) ) {
+				$qordoba_meta_data[ $id . '_title_text' ] = trim( $item['title_text'] );
+			}
+			if ( isset( $item['text'] ) ) {
+				$qordoba_meta_data[ $id . '_text' ] = trim( $item['text'] );
+			}
+			if ( isset( $item['description_text'] ) ) {
+				$qordoba_meta_data[ $id . '_description_text' ] = trim( $item['description_text'] );
+			}
+			if ( isset( $item['description'] ) ) {
+				$qordoba_meta_data[ $id . '_description' ] = trim( $item['description'] );
+			}
+			if ( isset( $item['editor'] ) ) {
+				$qordoba_meta_data[ $id . '_editor' ] = trim( $item['editor'] );
+			}
+			if ( isset( $item['testimonial_name'] ) ) {
+				$qordoba_meta_data[ $id . '_testimonial_name' ] = trim( strip_tags( $item['testimonial_name'] ) );
+			}
+			if ( isset( $item['testimonial_content'] ) ) {
+				$qordoba_meta_data[ $id . '_testimonial_content' ] = trim( $item['testimonial_content'] );
+			}
+			if ( isset( $item['html'] ) ) {
+				$qordoba_meta_data[ $id . '_html' ] = trim( $item['html'] );
+			}
+			if ( isset( $item['title_text_a'] ) ) {
+				$qordoba_meta_data[ $id . '_title_text_a' ] = trim( $item['title_text_a'] );
+			}
+			if ( isset( $item['description_text_a'] ) ) {
+				$qordoba_meta_data[ $id . '_description_text_a' ] = trim( $item['description_text_a'] );
+			}
+			if ( isset( $item['title_text_b'] ) ) {
+				$qordoba_meta_data[ $id . '_title_text_b' ] = trim( $item['title_text_b'] );
+			}
+			if ( isset( $item['description_text_b'] ) ) {
+				$qordoba_meta_data[ $id . '_description_text_b' ] = trim( $item['description_text_b'] );
+			}
+			if ( isset( $item['button_text'] ) ) {
+				$qordoba_meta_data[ $id . '_button_text' ] = trim( $item['button_text'] );
+			}
+			if ( isset( $item['tab_title'] ) ) {
+				$qordoba_meta_data[ $id . '_tab_title' ] = trim( $item['tab_title'] );
+			}
+			if ( isset( $item['tab_content'] ) ) {
+				$qordoba_meta_data[ $id . '_tab_content' ] = trim( $item['tab_content'] );
+			}
+		}
+
+		return $qordoba_meta_data;
+	}
+
+	/**
+	 * @param $term_id
+	 *
+	 * @return bool
+	 * @throws Exception
+	 */
+	public function send_term( $term_id ) {
+		$source_id   = $this->module()->get_source_term_id( $term_id );
+		$source_term = get_term( $source_id );
+
+		if ( ! $source_id || ! $source_term || is_wp_error( $source_term ) ) {
+			return false;
+		}
+
+		$object = new Qordoba_Object( $source_term );
+		$object->upload();
+
+		update_term_meta( $source_id, '_qor_queued', current_time( 'timestamp' ) );
+		delete_term_meta( $source_id, '_qor_updated' );
 	}
 
 	/**
@@ -818,6 +871,12 @@ class Qordoba {
 		}
 
 		return include sprintf( '%s/%s.php', QORDOBA_PLUGIN_DIR, $template );
+	}
+
+	/**
+	 *
+	 */
+	private function __clone() {
 	}
 
 }
