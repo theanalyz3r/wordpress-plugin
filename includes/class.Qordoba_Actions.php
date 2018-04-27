@@ -87,6 +87,8 @@ class Qordoba_Actions {
 	/**
 	 * @param $post_id
 	 * @param null $post
+	 *
+	 * @throws Exception
 	 */
 	public function maybe_send_post( $post_id, $post = null ) {
 		// skip on autosave
@@ -156,10 +158,11 @@ class Qordoba_Actions {
 	 *
 	 */
 	public function ajax_qordoba_send_bulk() {
-		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce', false ) || ! current_user_can( 'manage_options' ) ) {
+		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce',
+				false ) || ! current_user_can( 'manage_options' ) ) {
 			wp_send_json( array(
 				'error'        => true,
-				'errorMessage' => __( 'Access denied or your session has expired.' )
+				'errorMessage' => __( 'Access denied or your session has expired.' ),
 			) );
 
 			wp_die();
@@ -184,10 +187,11 @@ class Qordoba_Actions {
 	 *
 	 */
 	public function ajax_qordoba_download_bulk() {
-		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce', false ) || ! current_user_can( 'manage_options' ) ) {
+		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce',
+				false ) || ! current_user_can( 'manage_options' ) ) {
 			wp_send_json( array(
 				'error'        => true,
-				'errorMessage' => __( 'Access denied or your session has expired.' )
+				'errorMessage' => __( 'Access denied or your session has expired.' ),
 			) );
 			wp_die();
 		}
@@ -199,7 +203,7 @@ class Qordoba_Actions {
 			) );
 			wp_die();
 		}
-		$result = array();
+		$result    = array();
 		$max_time  = isset( $_REQUEST['max_time'] ) ? (int) $_REQUEST['max_time'] : 0;
 		$max_time  = max( $max_time, 15 );
 		$max_items = isset( $_REQUEST['max_items'] ) ? (int) $_REQUEST['max_items'] : 10;
@@ -241,18 +245,19 @@ class Qordoba_Actions {
 	public function qordoba_get_pending_content() {
 		wp_send_json( array(
 			'posts' => qor()->get_updated_posts(),
-			'terms' => qor()->get_updated_terms()
+			'terms' => qor()->get_updated_terms(),
 		) );
 		wp_die();
 	}
+
 	/**
 	 *
 	 */
 	public function qordoba_get_sent_content() {
 		$timestamp = isset( $_REQUEST['timestamp'] ) ? $_REQUEST['timestamp'] : time();
 		wp_send_json( array(
-			'posts' => qor()->get_queued_posts(-1, $timestamp),
-			'terms' => qor()->get_queued_terms(0, $timestamp)
+			'posts' => qor()->get_queued_posts( - 1, $timestamp ),
+			'terms' => qor()->get_queued_terms( 0, $timestamp ),
 		) );
 		wp_die();
 	}
@@ -275,7 +280,7 @@ class Qordoba_Actions {
 			wp_send_json( array( 'success' => false, 'message' => 'insufficient permissions' ) );
 		}
 
-		if ( Qordoba_Object::OBJECT_TYPE_POST  === $object_type ) {
+		if ( Qordoba_Object::OBJECT_TYPE_POST === $object_type ) {
 			qor()->send_post( $object_id );
 		} elseif ( Qordoba_Object::OBJECT_TYPE_TERM === $object_type ) {
 			qor()->send_term( $object_id );
@@ -292,7 +297,7 @@ class Qordoba_Actions {
 		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce', false ) ) {
 			wp_send_json( array(
 				'error'        => true,
-				'errorMessage' => __( 'Access denied or your session has expired.' )
+				'errorMessage' => __( 'Access denied or your session has expired.' ),
 			) );
 			wp_die();
 		}
@@ -308,7 +313,7 @@ class Qordoba_Actions {
 			wp_send_json( array( 'success' => false, 'message' => 'insufficient permissions' ) );
 		}
 
-		if ( Qordoba_Object::OBJECT_TYPE_POST  === $object_type ) {
+		if ( Qordoba_Object::OBJECT_TYPE_POST === $object_type ) {
 			qor()->download_post( $object_id );
 		} elseif ( Qordoba_Object::OBJECT_TYPE_TERM === $object_type ) {
 			qor()->download_term( $object_id );
@@ -319,12 +324,13 @@ class Qordoba_Actions {
 
 	/**
 	 *
+	 * @throws Exception
 	 */
 	public function qordoba_send_item() {
 		if ( ! check_ajax_referer( 'qordoba_send_bulk', 'qor_nonce', false ) ) {
 			wp_send_json( array(
 				'error'        => true,
-				'errorMessage' => __( 'Access denied or your session has expired.' )
+				'errorMessage' => __( 'Access denied or your session has expired.' ),
 			) );
 			wp_die();
 		}

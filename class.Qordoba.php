@@ -21,7 +21,7 @@ class Qordoba {
 	/**
 	 * @var null|Qordoba_Actions
 	 */
-	public $actions = null;
+	public $actions;
 	/**
 	 * @var null
 	 */
@@ -56,7 +56,7 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba
+	 * @return Qordoba
 	 */
 	public static function getInstance() {
 		if ( null === self::$instance ) {
@@ -248,7 +248,7 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba_Options
+	 * @return Qordoba_Options
 	 */
 	public function options() {
 		return $this->options;
@@ -382,7 +382,7 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba_Module_Default
+	 * @return Qordoba_Module_Default
 	 */
 	public function module() {
 		return $this->load_module();
@@ -757,7 +757,7 @@ class Qordoba {
 				}
 				if ( isset( $item['settings']['icon_list'] ) && is_array( $item['settings']['icon_list'] ) ) {
 					foreach ( $item['settings']['icon_list'] as $icon ) {
-						if ( isset( $icon['_id'] ) && isset( $icon['text'] )) {
+						if ( isset( $icon['_id'],  $icon['text'] ) ) {
 							$elementsData[ $item['id'] . '_' . $icon['_id'] ] ['text'] = $icon['text'];
 						}
 					}
@@ -835,7 +835,7 @@ class Qordoba {
 	/**
 	 * @param $term_id
 	 *
-	 * @return bool
+	 * @return bool|void
 	 * @throws Exception
 	 */
 	public function send_term( $term_id ) {
@@ -859,7 +859,7 @@ class Qordoba {
 	 *
 	 * @return mixed
 	 */
-	public function view( $template, $variables = array() ) {
+	public function view( $template, array $variables = array() ) {
 		if ( ! $variables ) {
 			$variables = array();
 		}
