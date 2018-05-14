@@ -27,7 +27,7 @@ class Upload {
   }
 
   public function setFileName($fileName) {
-    if(!v::alnum("-._")->validate($fileName)) {
+    if(!v::alnum("-.")->validate($fileName)) {
       throw new UploadException("Upload file name not valid.", UploadException::WRONG_FILENAME);
     }
 
