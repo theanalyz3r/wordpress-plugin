@@ -14,6 +14,12 @@
     var isBulkSend = function (action) {
         return 'qordoba_send_bulk' === action.toString().trim();
     };
+    var isBulkPendingSend = function (action) {
+        return 'qordoba_send_bulk_pending' === action.toString().trim();
+    };
+    var isBulkDraftSend = function (action) {
+        return 'qordoba_send_bulk_draft' === action.toString().trim();
+    };
 
     var isBulkDownload = function (action) {
         return 'qordoba_download_bulk' === action.toString().trim();
@@ -83,7 +89,7 @@
                 $.ajax({
                     url: ajaxurl,
                     data: {
-                        action: 'qordoba_get_pending_content',
+                        action: 'qordoba_get_published_content',
                         max_items: remaining,
                         timestamp: timestamp,
                         qor_nonce: qor_nonce
@@ -97,6 +103,40 @@
                     if (response.terms && (0 < response.terms.length)) {
                         for (var i = 0; i < response.terms.length; i++) {
                             sendQordobaItem(response.terms[i], 'term', qor_nonce);
+                        }
+                    }
+                    stop('Done.');
+                })
+            } else if (isBulkPendingSend(action)) {
+                $.ajax({
+                    url: ajaxurl,
+                    data: {
+                        action: 'qordoba_get_pending_content',
+                        max_items: remaining,
+                        timestamp: timestamp,
+                        qor_nonce: qor_nonce
+                    }
+                }).success(function (response) {
+                    if (response.posts && (0 < response.posts.length)) {
+                        for (var i = 0; i < response.posts.length; i++) {
+                            sendQordobaItem(response.posts[i], 'post', qor_nonce);
+                        }
+                    }
+                    stop('Done.');
+                })
+            } else if (isBulkDraftSend(action)) {
+                $.ajax({
+                    url: ajaxurl,
+                    data: {
+                        action: 'qordoba_get_draft_content',
+                        max_items: remaining,
+                        timestamp: timestamp,
+                        qor_nonce: qor_nonce
+                    }
+                }).success(function (response) {
+                    if (response.posts && (0 < response.posts.length)) {
+                        for (var i = 0; i < response.posts.length; i++) {
+                            sendQordobaItem(response.posts[i], 'post', qor_nonce);
                         }
                     }
                     stop('Done.');
