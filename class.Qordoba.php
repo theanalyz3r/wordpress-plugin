@@ -66,7 +66,7 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba
+	 * @return Qordoba
 	 */
 	public static function getInstance() {
 		if ( null === self::$instance ) {
@@ -128,7 +128,7 @@ class Qordoba {
 	}
 
 	/**
-	 * @return null|Qordoba_Module_Default
+	 * @return Qordoba_Module_Default
 	 */
 	public function module() {
 		return $this->load_module();
@@ -720,6 +720,62 @@ class Qordoba {
 	}
 
 	/**
+	 * @param int $count
+	 *
+	 * @return array
+	 */
+	public function get_pending_updated_posts() {
+		$args = array(
+			'fields'         => 'ids',
+			'post_type'      => $this->module()->translated_post_types,
+			'posts_per_page' => - 1,
+			'post_status'    => array( 'pending' ),
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_qor_version',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => '_qor_updated',
+					'compare' => 'EXISTS',
+				),
+			),
+		);
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_posts_by_lang( $lang, $args );
+	}
+
+	/**
+	 * @return array
+	 */
+	public function get_draft_updated_posts() {
+		$args = array(
+			'fields'         => 'ids',
+			'post_type'      => $this->module()->translated_post_types,
+			'posts_per_page' => - 1,
+			'post_status'    => array( 'draft' ),
+			'meta_query'     => array(
+				'relation' => 'OR',
+				array(
+					'key'     => '_qor_version',
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => '_qor_updated',
+					'compare' => 'EXISTS',
+				),
+			),
+		);
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_posts_by_lang( $lang, $args );
+	}
+
+	/**
 	 * @param int $number
 	 *
 	 * @return array|int|WP_Error
@@ -761,6 +817,60 @@ class Qordoba {
 			'posts_per_page' => $count,
 			'meta_key'       => '_qor_queued',
 			'orderby'        => 'meta_value_num',
+			'order'          => 'ASC',
+		);
+
+		if ( $timestamp ) {
+			$args['meta_value']   = (int) $timestamp;
+			$args['meta_compare'] = '<';
+		}
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_posts_by_lang( $lang, $args );
+	}
+
+	/**
+	 * @param int $count
+	 * @param bool $timestamp
+	 *
+	 * @return array
+	 */
+	public function get_panding_queued_posts( $count = - 1, $timestamp = false ) {
+		$args = array(
+			'fields'         => 'ids',
+			'post_type'      => $this->module()->translated_post_types,
+			'posts_per_page' => $count,
+			'meta_key'       => '_qor_queued',
+			'orderby'        => 'meta_value_num',
+			'post_status'    => array( 'pending' ),
+			'order'          => 'ASC',
+		);
+
+		if ( $timestamp ) {
+			$args['meta_value']   = (int) $timestamp;
+			$args['meta_compare'] = '<';
+		}
+
+		$lang = $this->module()->get_default_language( 'slug' );
+
+		return $this->module()->get_posts_by_lang( $lang, $args );
+	}
+
+	/**
+	 * @param int $count
+	 * @param bool $timestamp
+	 *
+	 * @return array
+	 */
+	public function get_draft_queued_posts( $count = - 1, $timestamp = false ) {
+		$args = array(
+			'fields'         => 'ids',
+			'post_type'      => $this->module()->translated_post_types,
+			'posts_per_page' => $count,
+			'meta_key'       => '_qor_queued',
+			'orderby'        => 'meta_value_num',
+			'post_status'    => array( 'draft' ),
 			'order'          => 'ASC',
 		);
 

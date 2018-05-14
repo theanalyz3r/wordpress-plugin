@@ -109,7 +109,7 @@ class Qordoba_Options {
 
 		add_settings_field(
 			'project_id',
-			'Project ID',
+			'Workspace ID',
 			array( $this, 'render_number_field' ),
 			'qordoba',
 			'qordoba_general_settings',
@@ -127,7 +127,7 @@ class Qordoba_Options {
 
 		add_settings_field(
 			'languages',
-			'Languages',
+			'Personas',
 			array( $this, 'render_languages_field' ),
 			'qordoba',
 			'qordoba_general_settings'
@@ -332,7 +332,6 @@ class Qordoba_Options {
                 <label for="<?php print $field_name; ?>"><?php printf( '%s (%s): ', $lang['name'], $slug ); ?></label>
                 <select name="<?php print $field_name; ?>">
                     <option value=""><?php _e( 'Select Language', 'qordoba' ); ?></option>
-
 					<?php foreach ( $project_languages as $qor_lang ): ?>
                         <option value="<?php print $qor_lang->code; ?>" <?php selected( $selected, $qor_lang->code ); ?>><?php printf( '%s (%s)', $qor_lang->name, $qor_lang->code ); ?></option>
 					<?php endforeach; ?>
@@ -461,20 +460,30 @@ class Qordoba_Options {
 	 *
 	 */
 	public function render_options_page() {
-		$updated_posts = count( qor()->get_updated_posts() );
-		$updated_terms = count( qor()->get_updated_terms() );
+		$updated_posts         = count( qor()->get_updated_posts() );
+		$updated_pending_posts = count( qor()->get_pending_updated_posts() );
+		$updated_draft_posts   = count( qor()->get_draft_updated_posts() );
+		$updated_terms         = count( qor()->get_updated_terms() );
 
-		$queued_posts = count( qor()->get_queued_posts() );
-		$queued_terms = count( qor()->get_queued_terms() );
+		$queued_posts         = count( qor()->get_queued_posts() );
+		$queued_pending_posts = count( qor()->get_panding_queued_posts() );
+		$queued_draft_posts   = count( qor()->get_draft_queued_posts() );
+		$queued_terms         = count( qor()->get_queued_terms() );
 
 		$vars = array(
-			'updated_posts'       => $updated_posts,
-			'updated_terms'       => $updated_terms,
-			'has_updated_content' => $updated_posts || $updated_terms,
-
-			'queued_posts'       => $queued_posts,
-			'queued_terms'       => $queued_terms,
-			'has_queued_content' => ( $queued_posts || $queued_terms ),
+			'updated_posts'               => $updated_posts,
+			'updated_terms'               => $updated_terms,
+			'updated_pending_posts'       => $updated_pending_posts,
+			'updated_draft_posts'         => $updated_draft_posts,
+			'queued_pending_posts'        => $queued_pending_posts,
+			'queued_draft_posts'          => $queued_draft_posts,
+			'has_updated_content'         => $updated_posts || $updated_terms,
+			'has_pending_updated_content' => 0 < $updated_pending_posts,
+			'has_draft_updated_content'   => 0 < $updated_draft_posts,
+			'queued_posts'                => $queued_posts,
+			'queued_terms'                => $queued_terms,
+			'has_queued_content'          => $queued_posts || $queued_terms || $queued_pending_posts || $queued_draft_posts,
+			'has_queued_pending_content'  => $queued_pending_posts,
 		);
 
 		qor()->view( 'views/options', $vars );

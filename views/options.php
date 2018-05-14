@@ -16,33 +16,29 @@
         <tr class="qordoba-bulk" data-action="qordoba_send_bulk"
             data-timestamp="<?php print current_time( 'timestamp' ); ?>">
             <th>
-                <button class="qordoba_request button button-primary"<?php print $has_updated_content ? '' : ' disabled '; ?>><?php _e( 'Send Content', 'qordoba' ); ?></button>
+                <button class="qordoba_request button button-primary"<?php print $has_updated_content ? '' : ' disabled '; ?>><?php _e( 'Send Published Content', 'qordoba' ); ?></button>
                 <img class="qordoba-loading" style="display: none;"
                      src="<?php print admin_url( 'images/loading.gif' ); ?>">
             </th>
             <td>
 				<?php if ( $has_updated_content ): ?>
-
                     <div class="qordoba-status" data-items="<?php print $updated_posts + $updated_terms; ?>"
                          style="position:relative; max-width:400px; border:solid 0px #cddc39;">
                         <div class="qordoba-info">
-							<?php printf( __( 'Pending content: %1$d (%2$d posts, %3$d terms)', 'qordoba' ), $updated_posts + $updated_terms, $updated_posts, $updated_terms ); ?>
+							<?php printf( __( 'Published content: %1$d (%2$d posts, %3$d terms)', 'qordoba' ), $updated_posts + $updated_terms, $updated_posts, $updated_terms ); ?>
                         </div>
                         <div class="qordoba-progress"
                              style="position:absolute;left:0;top:0;bottom:0;width:0%;background:#cddc39;z-index:-1;"></div>
                     </div>
-
 				<?php else: ?>
-
 					<?php _e( 'There is no content ready to be uploaded', 'qordoba' ); ?>
-
 				<?php endif; ?>
             </td>
         </tr>
         <tr class="qordoba-bulk" data-action="qordoba_download_bulk"
             data-timestamp="<?php print current_time( 'timestamp' ); ?>">
             <th>
-                <button class="qordoba_request button button-primary"<?php print $has_queued_content ? '' : ' disabled '; ?>><?php _e( 'Receive Content', 'qordoba' ); ?></button>
+                <button class="qordoba_request button button-primary"<?php print $has_queued_content ? '' : ' disabled '; ?>><?php _e( 'Receive Sent Content', 'qordoba' ); ?></button>
                 <img class="qordoba-loading" style="display: none;"
                      src="<?php print admin_url( 'images/loading.gif' ); ?>">
             </th>
@@ -53,7 +49,7 @@
                     <div class="qordoba-status" data-items="<?php print $queued_posts + $queued_terms; ?>"
                          style="position:relative; max-width:400px; border:solid 0px #cddc39;">
                         <div class="qordoba-info">
-							<?php printf( __( 'Pending content: %1$d (%2$d posts, %3$d terms)', 'qordoba' ), $queued_posts + $queued_terms, $queued_posts, $queued_terms ); ?>
+							<?php printf( __( 'Pending content: %1$d (%2$d posts, %3$d terms)', 'qordoba' ), $queued_posts + $queued_terms + $queued_pending_posts  + $queued_draft_posts, $queued_posts + $queued_pending_posts  + $queued_draft_posts, $queued_terms ); ?>
                         </div>
                         <div class="qordoba-progress"
                              style="position:absolute;left:0;top:0;bottom:0;width:0%;background:#cddc39;z-index:-1;"></div>
@@ -64,6 +60,60 @@
 					<?php _e( 'There is no content with pending translations', 'qordoba' ); ?>
 
 				<?php endif; ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <hr>
+            </td>
+        </tr>
+        <tr class="qordoba-bulk" data-action="qordoba_send_bulk_pending"
+            data-timestamp="<?php print current_time( 'timestamp' ); ?>">
+            <th>
+                <button class="qordoba_request button button-primary"<?php print $has_pending_updated_content ? '' : ' disabled '; ?>><?php _e( 'Send Pending Content', 'qordoba' ); ?></button>
+                <img class="qordoba-loading" style="display: none;"
+                     src="<?php print admin_url( 'images/loading.gif' ); ?>">
+            </th>
+            <td>
+			    <?php if ( $has_pending_updated_content ): ?>
+                    <div class="qordoba-status" data-items="<?php print $updated_pending_posts; ?>"
+                         style="position:relative; max-width:400px; border:solid 0px #cddc39;">
+                        <div class="qordoba-info">
+						    <?php printf( __( 'Pending content: %1$d', 'qordoba' ), $updated_pending_posts ); ?>
+                        </div>
+                        <div class="qordoba-progress"
+                             style="position:absolute;left:0;top:0;bottom:0;width:0%;background:#cddc39;z-index:-1;"></div>
+                    </div>
+			    <?php else: ?>
+				    <?php _e( 'There is no content ready to be uploaded', 'qordoba' ); ?>
+			    <?php endif; ?>
+            </td>
+        </tr>
+        <tr class="qordoba-bulk" data-action="qordoba_send_bulk_draft"
+            data-timestamp="<?php print current_time( 'timestamp' ); ?>">
+            <th>
+                <button class="qordoba_request button button-primary"<?php print $has_draft_updated_content ? '' : ' disabled '; ?>><?php _e( 'Send Draft Content', 'qordoba' ); ?></button>
+                <img class="qordoba-loading" style="display: none;"
+                     src="<?php print admin_url( 'images/loading.gif' ); ?>">
+            </th>
+            <td>
+			    <?php if ( $has_draft_updated_content ): ?>
+                    <div class="qordoba-status" data-items="<?php print $updated_draft_posts; ?>"
+                         style="position:relative; max-width:400px; border:solid 0px #cddc39;">
+                        <div class="qordoba-info">
+						    <?php printf( __( 'Draft content: %1$d', 'qordoba' ), $updated_draft_posts ); ?>
+                        </div>
+                        <div class="qordoba-progress"
+                             style="position:absolute;left:0;top:0;bottom:0;width:0%;background:#cddc39;z-index:-1;"></div>
+                    </div>
+			    <?php else: ?>
+				    <?php _e( 'There is no content ready to be uploaded', 'qordoba' ); ?>
+			    <?php endif; ?>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <hr>
             </td>
         </tr>
     </table>
