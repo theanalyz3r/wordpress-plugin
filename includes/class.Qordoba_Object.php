@@ -95,14 +95,16 @@ class Qordoba_Object {
 	public function __construct( $object, $additional_meta = array() ) {
 
 		if ( $object instanceof WP_Post ) {
-			$this->translated_meta = apply_filters( "qor_translated_{$object->post_type}_meta", qor()->options()->get( 'post_fields' ) );
+			$this->translated_meta = apply_filters( "qor_translated_{$object->post_type}_meta",
+				qor()->options()->get( 'post_fields' ) );
 			$this->object_type     = self::OBJECT_TYPE_POST;
 			$this->object_name     = $object->post_title . ' ' . $object->post_type;
 			$this->object_id       = $object->ID;
 			$this->meta            = $additional_meta;
-			$this->object_url      = str_replace(home_url(), '', get_permalink($object->ID));
+			$this->object_url      = str_replace( home_url(), '', get_permalink( $object->ID ) );
 		} elseif ( $object instanceof WP_Term ) {
-			$this->translated_meta = apply_filters( "qor_translated_{$object->taxonomy}_meta", qor()->options()->get( 'term_fields' ) );
+			$this->translated_meta = apply_filters( "qor_translated_{$object->taxonomy}_meta",
+				qor()->options()->get( 'term_fields' ) );
 			$this->object_type     = self::OBJECT_TYPE_TERM;
 			$this->object_name     = $object->taxonomy;
 			$this->object_id       = $object->term_id;
@@ -118,6 +120,16 @@ class Qordoba_Object {
 		$this->object = $object;
 
 		$this->version = (int) $this->get_meta( '_qor_version', true );
+	}
+
+	/**
+	 * @param bool $key
+	 * @param bool $single
+	 *
+	 * @return mixed
+	 */
+	public function get_meta( $key = false, $single = false ) {
+		return call_user_func( "get_{$this->object_type}_meta", $this->object_id, $key, $single );
 	}
 
 	/**
@@ -147,6 +159,29 @@ class Qordoba_Object {
 	}
 
 	/**
+	 * @param $custom_fields
+	 *
+	 * @return array
+	 */
+	protected function parse_custom_fields( $custom_fields ) {
+		$result = array();
+
+		foreach ( $custom_fields as $name => $value ) {
+			if ( 1 === preg_match( '/(.*)_(\d+)$/', $name, $matches ) ) {
+				$meta_key = $matches[1];
+				$i        = $matches[2];
+				if ( ! isset( $result[ $meta_key ] ) ) {
+					$result[ $meta_key ] = array();
+				}
+				$result[ $meta_key ][ $i ] = $value;
+			}
+
+		}
+
+		return $result;
+	}
+
+	/**
 	 * @param null $language
 	 *
 	 * @return array
@@ -168,7 +203,8 @@ class Qordoba_Object {
 					if ( ! isset( $result[ $lang ] ) ) {
 						$result[ $lang ] = array();
 					}
-					$result[ $lang ][ $field ] = trim( wp_kses( $translation, wp_kses_allowed_html( self::OBJECT_TYPE_POST ) ) );
+					$result[ $lang ][ $field ] = trim( wp_kses( $translation,
+						wp_kses_allowed_html( self::OBJECT_TYPE_POST ) ) );
 				}
 
 			}
@@ -187,33 +223,160 @@ class Qordoba_Object {
 	}
 
 	/**
+	 * @return array
+	 */
+	protected function get_fields() {
+		$fields = array();
+
+		if ( self::OBJECT_TYPE_POST === $this->object_type ) {
+			$fields = apply_filters( "qor_translated_{$this->object->post_type}_fields", array(
+				'post_title',
+				'post_content',
+				'post_excerpt',
+			) );
+			$fields = array_unique( $fields );
+
+		} elseif ( self::OBJECT_TYPE_TERM == $this->object_type ) {
+			$fields = apply_filters( "qor_translated_{$this->object->taxonomy}_fields", array(
+				'name',
+				'description',
+			) );
+			$fields = array_unique( $fields );
+		}
+
+		return $fields;
+	}
+
+	/**
+	 * @param $name
+	 * @param null $language
+	 * @param string $type
+	 *
+	 * @return array
+	 * @throws Exception
+	 */
+	protected function download_document( $name, $language = null, $type = self::OBJECT_DATA_TYPE_HTML ) {
+		$name     = $this->sanitize_name( $name );
+		$document = qor()->new_qordoba_document( $type );
+		$document->setName( $name );
+		$document->setTag( (string) $this->version );
+
+		return $document->fetchTranslation();
+	}
+
+	/**
+	 * @param $name
+	 *
+	 * @return mixed
+	 */
+	protected function sanitize_name( $name ) {
+		return rtrim( preg_replace( '/[^a-zA-Z0-9.__]/', self::DOCUMENT_TITLE_SEPARATOR, $name ),
+			self::DOCUMENT_TITLE_SEPARATOR );
+	}
+
+	/**
+	 * @param string $field
+	 * @param int $index
+	 *
+	 * @return string
+	 */
+	protected function format_custom_field( $field, $index ) {
+		return $this->sanitize_name(
+			sprintf( '%s-%d_custom-field-%s-%d', $this->object_name, $this->object_id, $field, $index )
+		);
+	}
+
+	/**
+	 * @param string $field
+	 *
+	 * @return string
+	 */
+	protected function format_object_field( $field ) {
+		$format = $this->sanitize_name( sprintf( '%s__%d__%s', $this->object_name, $this->object_id, $field ) );
+		if ( null !== $this->object_url ) {
+			$format = $this->sanitize_name( sprintf( '%s__%d__%s__%s', $this->object_name, $this->object_id, $field,
+				$this->object_url ) );
+		}
+
+		return $format;
+	}
+
+	/**
+	 * @param $result
+	 *
+	 * @return array
+	 * @throws Exception
+	 */
+	protected function download_custom_fields( &$result ) {
+		$meta = $this->get_meta();
+
+		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() || Qordoba_Custom_Fields_Table::is_acf_pro_plugin_exist() ) {
+			if ( ! $meta && empty( $result ) ) {
+				return array();
+			}
+			$document_name      = $this->get_custom_fields_document_name();
+			$field_translations = $this->download_document( $document_name, null, self::OBJECT_DATA_TYPE_JSON );
+			foreach ( $field_translations as $lang => $translations ) {
+				foreach ( $translations as $translation_key => $translation_value ) {
+					$custom_field_key = $this->get_custom_field_key( $translation_key );
+					if ( '' !== $custom_field_key ) {
+						$result[ $lang ]['custom_fields'][ $custom_field_key ] = $translation_value;
+					}
+				}
+			}
+		} else {
+			if ( ! $meta && empty( $result ) ) {
+				return array();
+			}
+			$meta               = array_intersect_key( $meta, array_flip( $this->translated_meta ) );
+			$document_name      = $this->get_custom_fields_document_name();
+			$field_translations = $this->download_document( $document_name, null, self::OBJECT_DATA_TYPE_JSON );
+			foreach ( $meta as $key => $values ) {
+				foreach ( $result as $lang => $translated_object ) {
+					$result[ $lang ]['custom_fields'] = array();
+				}
+			}
+			foreach ( $field_translations as $lang => $translations ) {
+				foreach ( $translations as $translation_key => $translation_value ) {
+					$custom_field_key = $this->get_custom_field_key( $translation_key );
+					if ( '' !== $custom_field_key ) {
+						$result[ $lang ]['custom_fields'][ $custom_field_key ] = $translation_value;
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * @return mixed
+	 */
+	protected function get_custom_fields_document_name() {
+		$format = $this->sanitize_name( sprintf( '%s__%d__custom_fields', $this->object_name, $this->object_id ) );
+		if ( null !== $this->object_url ) {
+			$format = $this->sanitize_name( sprintf( '%s__%d__custom_fields__%s', $this->object_name, $this->object_id, $this->object_url ) );
+		}
+		return $format;
+	}
+
+	/**
+	 * @param string $title
+	 *
+	 * @return string
+	 */
+	protected function get_custom_field_key( $title = '' ) {
+		$titleRow = explode( self::DOCUMENT_TITLE_SEPARATOR, $title );
+		if ( empty( $titleRow[ count( $titleRow ) - 1 ] ) ) {
+			unset( $titleRow[ count( $titleRow ) - 1 ] );
+		}
+
+		return implode( self::CUSTOM_FIELD_DIVIDER, $titleRow );
+	}
+
+	/**
 	 * @return int
 	 */
 	public function get_version() {
 		return $this->version;
-	}
-
-	/**
-	 * @param $custom_fields
-	 *
-	 * @return array
-	 */
-	protected function parse_custom_fields( $custom_fields ) {
-		$result = array();
-
-		foreach ( $custom_fields as $name => $value ) {
-			if ( 1 === preg_match( '/(.*)_(\d+)$/', $name, $matches ) ) {
-				$meta_key = $matches[1];
-				$i        = $matches[2];
-				if ( ! isset( $result[ $meta_key ] ) ) {
-					$result[ $meta_key ] = array();
-				}
-				$result[ $meta_key ][ $i ] = $value;
-			}
-
-		}
-
-		return $result;
 	}
 
 	/**
@@ -238,73 +401,14 @@ class Qordoba_Object {
 	}
 
 	/**
-	 * @param string $field
-	 *
-	 * @return string
-	 */
-	protected function format_object_field( $field ) {
-		$format = $this->sanitize_name( sprintf( '%s__%d__%s', $this->object_name, $this->object_id, $field ) );
-		if ( null !== $this->object_url ) {
-			$format = $this->sanitize_name( sprintf( '%s__%d__%s__%s', $this->object_name, $this->object_id, $field,
-				$this->object_url ) );
-		}
-		return $format;
-	}
-
-	/**
-	 * @param string $field
-	 * @param int $index
-	 *
-	 * @return string
-	 */
-	protected function format_custom_field( $field, $index ) {
-		return $this->sanitize_name(
-			sprintf( '%s-%d_custom-field-%s-%d', $this->object_name, $this->object_id, $field, $index )
-		);
-	}
-
-	/**
-	 * @param string $field
-	 * @param int $index
-	 *
-	 * @return string
-	 */
-	protected function format_custom_field_key( $field, $index ) {
-		return $this->sanitize_name( sprintf( '%s-%d', $field, $index ) );
-	}
-
-	/**
-	 * @return array
-	 */
-	protected function get_fields() {
-		$fields = array();
-
-		if ( self::OBJECT_TYPE_POST === $this->object_type ) {
-			$fields = apply_filters( "qor_translated_{$this->object->post_type}_fields", array(
-				'post_title',
-				'post_content',
-				'post_excerpt'
-			) );
-			$fields = array_unique( $fields );
-
-		} elseif ( self::OBJECT_TYPE_TERM == $this->object_type ) {
-			$fields = apply_filters( "qor_translated_{$this->object->taxonomy}_fields", array(
-				'name',
-				'description'
-			) );
-			$fields = array_unique( $fields );
-		}
-
-		return $fields;
-	}
-
-	/**
-	 * @param $name
+	 * @param $key
+	 * @param $value
+	 * @param string $prev_value
 	 *
 	 * @return mixed
 	 */
-	protected function sanitize_name( $name ) {
-		return rtrim(preg_replace( '/[^a-zA-Z0-9.__]/', self::DOCUMENT_TITLE_SEPARATOR, $name ), self::DOCUMENT_TITLE_SEPARATOR);
+	public function update_meta( $key, $value, $prev_value = '' ) {
+		return call_user_func( "update_{$this->object_type}_meta", $this->object_id, $key, $value, $prev_value );
 	}
 
 	/**
@@ -340,42 +444,6 @@ class Qordoba_Object {
 	}
 
 	/**
-	 * @param $name
-	 * @param null $language
-	 * @param string $type
-	 *
-	 * @return array
-	 * @throws Exception
-	 */
-	protected function download_document( $name, $language = null, $type = self::OBJECT_DATA_TYPE_HTML ) {
-		$name     = $this->sanitize_name( $name );
-		$document = qor()->new_qordoba_document( $type );
-		$document->setName( $name );
-		$document->setTag( (string) $this->version );
-
-		return $document->fetchTranslation();
-	}
-
-	/**
-	 * @param array $meta
-	 * @param string $field
-	 *
-	 * @return string
-	 */
-	protected function get_key_by_field($meta = array(), $field = '') {
-		$translate_field_key = '';
-		if ('' !== $field) {
-			foreach ($meta as $key => $value) {
-				if (isset($value[0]) && ($value[0] === $field)) {
-					$translate_field_key = ltrim($key, self::CUSTOM_FIELD_DIVIDER);
-					break;
-				}
-			}
-		}
-		return $translate_field_key;
-	}
-
-	/**
 	 * @param string $type
 	 *
 	 * @throws Exception
@@ -384,10 +452,11 @@ class Qordoba_Object {
 	protected function send_custom_fields( $type = self::OBJECT_DATA_TYPE_HTML ) {
 
 		if ( is_array( $this->meta ) && ( 0 < count( $this->meta ) ) ) {
-			$this->send_document( $this->format_custom_field( 'elementor', $this->version ), $this->meta, self::OBJECT_DATA_TYPE_JSON );
+			$this->send_document( $this->format_custom_field( 'elementor', $this->version ), $this->meta,
+				self::OBJECT_DATA_TYPE_JSON );
 		}
 
-		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() ) {
+		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() || Qordoba_Custom_Fields_Table::is_acf_pro_plugin_exist() ) {
 			$meta = $this->get_meta();
 
 			if ( ! $meta || ( 0 === count( $meta ) ) ) {
@@ -398,7 +467,7 @@ class Qordoba_Object {
 			$document->setName( $this->get_custom_fields_document_name() );
 			if ( $this->translated_meta ) {
 				$translate_item_count = 0;
-				$keys = array();
+				$keys                 = array();
 				foreach ( $this->translated_meta as $field ) {
 					$keys[] = $this->get_key_by_field( $meta, $field );
 				}
@@ -414,16 +483,12 @@ class Qordoba_Object {
 					$document->createTranslation();
 				}
 			}
-
-
-
 		} else {
 			$meta = $this->get_meta();
 			$meta = array_intersect_key( $meta, array_flip( $this->translated_meta ) );
 			if ( ! $meta || ( 0 === count( $meta ) ) ) {
 				return;
 			}
-
 			$document = qor()->new_qordoba_document( self::OBJECT_DATA_TYPE_JSON );
 			$document->setName( $this->get_custom_fields_document_name() );
 			foreach ( $meta as $key => $values ) {
@@ -437,65 +502,32 @@ class Qordoba_Object {
 	}
 
 	/**
-	 * @param $result
-	 *
-	 * @return array
-	 * @throws Exception
-	 */
-	protected function download_custom_fields( &$result ) {
-		$meta = $this->get_meta();
-
-		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() ) {
-			if ( ! $meta && empty( $result ) ) {
-				return array();
-			}
-			$document_name      = $this->get_custom_fields_document_name();
-			$field_translations = $this->download_document( $document_name, null, self::OBJECT_DATA_TYPE_JSON );
-			foreach ( $field_translations as $lang => $translations ) {
-				foreach ( $translations as $translation_key => $translation_value ) {
-					$custom_field_key = $this->get_custom_field_key( $translation_key );
-					if ( '' !== $custom_field_key ) {
-						$result[ $lang ]['custom_fields'][ (string) $custom_field_key ] = $translation_value;
-					}
-				}
-			}
-		} else {
-			if ( ! $meta && empty( $result ) ) {
-				return array();
-			}
-
-			$meta               = array_intersect_key( $meta, array_flip( $this->translated_meta ) );
-			$document_name      = $this->get_custom_fields_document_name();
-			$field_translations = $this->download_document( $document_name, null, self::OBJECT_DATA_TYPE_JSON );
-
-			foreach ( $meta as $key => $values ) {
-				foreach ( $result as $lang => $translated_object ) {
-					$result[ $lang ]['custom_fields'] = array();
-				}
-			}
-			foreach ( $field_translations as $lang => $translations ) {
-				foreach ( $translations as $translation_key => $translation_value ) {
-					$custom_field_key = $this->get_custom_field_key( $translation_key );
-					if ( '' !== $custom_field_key ) {
-						$result[ $lang ]['custom_fields'][ $custom_field_key ] = $translation_value;
-					}
-				}
-			}
-		}
-	}
-
-	/**
-	 * @param string $title
+	 * @param array $meta
+	 * @param string $field
 	 *
 	 * @return string
 	 */
-	protected function get_custom_field_key( $title = '' ) {
-		$titleRow = explode( self::DOCUMENT_TITLE_SEPARATOR, $title );
-		if ( empty( $titleRow[ count( $titleRow ) - 1 ] ) ) {
-			unset( $titleRow[ count( $titleRow ) - 1 ] );
+	protected function get_key_by_field( $meta = array(), $field = '' ) {
+		$translate_field_key = '';
+		if ( '' !== $field ) {
+			foreach ( $meta as $key => $value ) {
+				if ( $field === $key ) {
+					$translate_field_key = ltrim( $key, self::CUSTOM_FIELD_DIVIDER );
+				}
+			}
 		}
 
-		return implode( self::CUSTOM_FIELD_DIVIDER, $titleRow );
+		return $translate_field_key;
+	}
+
+	/**
+	 * @param string $field
+	 * @param int $index
+	 *
+	 * @return string
+	 */
+	protected function format_custom_field_key( $field, $index ) {
+		return $this->sanitize_name( sprintf( '%s-%d', $field, $index ) );
 	}
 
 	/**
@@ -504,19 +536,8 @@ class Qordoba_Object {
 	 *
 	 * @return mixed
 	 */
-	public function get_meta( $key = false, $single = false ) {
+	public function get_pro_meta( $key = false, $single = false ) {
 		return call_user_func( "get_{$this->object_type}_meta", $this->object_id, $key, $single );
-	}
-
-	/**
-	 * @param $key
-	 * @param $value
-	 * @param string $prev_value
-	 *
-	 * @return mixed
-	 */
-	public function update_meta( $key, $value, $prev_value = '' ) {
-		return call_user_func( "update_{$this->object_type}_meta", $this->object_id, $key, $value, $prev_value );
 	}
 
 	/**
@@ -527,13 +548,5 @@ class Qordoba_Object {
 	 */
 	public function delete_meta( $key, $value = '' ) {
 		return call_user_func( "delete_{$this->object_type}_meta", $this->object_id, $key, $value );
-	}
-
-	/**
-	 * @return mixed
-	 */
-	protected function get_custom_fields_document_name() {
-
-		return $this->sanitize_name( $this->object->post_title . ' ' . $this->object->ID . ' ' . 'custom-fields' );
 	}
 }
