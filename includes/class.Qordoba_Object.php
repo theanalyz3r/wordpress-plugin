@@ -95,16 +95,14 @@ class Qordoba_Object {
 	public function __construct( $object, $additional_meta = array() ) {
 
 		if ( $object instanceof WP_Post ) {
-			$this->translated_meta = apply_filters( "qor_translated_{$object->post_type}_meta",
-				qor()->options()->get( 'post_fields' ) );
+			$this->translated_meta = apply_filters( "qor_translated_{$object->post_type}_meta", qor()->options()->get( 'post_fields' ) );
 			$this->object_type     = self::OBJECT_TYPE_POST;
 			$this->object_name     = $object->post_title . ' ' . $object->post_type;
 			$this->object_id       = $object->ID;
 			$this->meta            = $additional_meta;
 			$this->object_url      = str_replace( home_url(), '', get_permalink( $object->ID ) );
 		} elseif ( $object instanceof WP_Term ) {
-			$this->translated_meta = apply_filters( "qor_translated_{$object->taxonomy}_meta",
-				qor()->options()->get( 'term_fields' ) );
+			$this->translated_meta = apply_filters( "qor_translated_{$object->taxonomy}_meta", qor()->options()->get( 'term_fields' ) );
 			$this->object_type     = self::OBJECT_TYPE_TERM;
 			$this->object_name     = $object->taxonomy;
 			$this->object_id       = $object->term_id;
@@ -192,8 +190,8 @@ class Qordoba_Object {
 
 		$sent_documents = $this->get_meta( '_qor_sent_docs', true );
 		$fields         = $this->get_fields();
-		$elementorData  = $this->download_document(
-			$this->format_custom_field( 'elementor', $this->version ), null, self::OBJECT_DATA_TYPE_JSON
+		$customMetaData  = $this->download_document(
+			$this->get_metas_document_title(), null, self::OBJECT_DATA_TYPE_JSON
 		);
 		foreach ( $fields as $field ) {
 			$document_name = $this->format_object_field( $field );
@@ -209,8 +207,8 @@ class Qordoba_Object {
 
 			}
 		}
-		if ( $elementorData && ( 0 < count( $elementorData ) ) ) {
-			foreach ( $elementorData as $lang => $translation ) {
+		if ( $customMetaData && ( 0 < count( $customMetaData ) ) ) {
+			foreach ( $customMetaData as $lang => $translation ) {
 				if ( ! isset( $result[ $lang ] ) ) {
 					$result[ $lang ] = array();
 				}
@@ -282,7 +280,7 @@ class Qordoba_Object {
 	 */
 	protected function format_custom_field( $field, $index ) {
 		return $this->sanitize_name(
-			sprintf( '%s-%d_custom-field-%s-%d', $this->object_name, $this->object_id, $field, $index )
+			sprintf( '%s__%d__custom_field__%s__%d', $this->object_name, $this->object_id, $field, $index )
 		);
 	}
 
@@ -444,16 +442,39 @@ class Qordoba_Object {
 	}
 
 	/**
-	 * @param string $type
-	 *
-	 * @throws Exception
-	 * @throws \Qordoba\Exception\DocumentException
+	 * @return bool
 	 */
-	protected function send_custom_fields( $type = self::OBJECT_DATA_TYPE_HTML ) {
+	private function is_elementor_plugin_exists() {
+		return defined( 'ELEMENTOR_VERSION' );
+	}
+
+	/**
+	 * @return bool
+	 */
+	private function is_pagebuilder_plugin_exists() {
+		return defined( 'FL_BUILDER_VERSION' );
+	}
+
+	/**
+	 * @return string
+	 */
+	private function get_metas_document_title() {
+		$title = '';
+		if ($this->is_pagebuilder_plugin_exists()) {
+			$title = $this->format_custom_field( 'pagebuilder', $this->version );
+		} else if ($this->is_elementor_plugin_exists()) {
+			$title = $this->format_custom_field( 'elementor', $this->version );
+		}
+		return $title;
+	}
+
+	/**
+	 * @throws Exception
+	 */
+	protected function send_custom_fields() {
 
 		if ( is_array( $this->meta ) && ( 0 < count( $this->meta ) ) ) {
-			$this->send_document( $this->format_custom_field( 'elementor', $this->version ), $this->meta,
-				self::OBJECT_DATA_TYPE_JSON );
+			$this->send_document( $this->get_metas_document_title(), $this->meta, self::OBJECT_DATA_TYPE_JSON );
 		}
 
 		if ( Qordoba_Custom_Fields_Table::is_acf_plugin_exist() || Qordoba_Custom_Fields_Table::is_acf_pro_plugin_exist() ) {
@@ -507,7 +528,7 @@ class Qordoba_Object {
 	 *
 	 * @return string
 	 */
-	protected function get_key_by_field( $meta = array(), $field = '' ) {
+	protected function get_key_by_field( array $meta = array(), $field = '' ) {
 		$translate_field_key = '';
 		if ( '' !== $field ) {
 			foreach ( $meta as $key => $value ) {
@@ -541,7 +562,7 @@ class Qordoba_Object {
 	}
 
 	/**
-	 * @param $key
+	 * @param string $key
 	 * @param string $value
 	 *
 	 * @return mixed
