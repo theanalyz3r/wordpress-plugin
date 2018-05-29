@@ -252,7 +252,9 @@ abstract class Qordoba_Module {
 	public function qordoba_metabox_post( $post ) {
 		if ( ! qor()->qordoba_api_configured() || ! qor()->get_project_meta_data() ) {
 			return printf( __( 'Please configure project on the <a href="%s">Qordoba Options Page</a>.', 'qordoba' ), admin_url( 'admin.php?page=qordoba' ) );
-		} elseif ( ! qor()->get_project_language() ) {
+		}
+
+		if ( ! qor()->get_project_language() ) {
 			return printf( __( 'Please configure "%s" language on the <a href="%s">Qordoba Options</a> page.', 'qordoba' ), qor()->get_project_meta_data()->source_language->name, admin_url( 'admin.php?page=qordoba' ) );
 		}
 

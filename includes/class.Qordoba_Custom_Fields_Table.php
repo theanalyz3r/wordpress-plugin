@@ -24,7 +24,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 	/**
 	 * @const string
 	 */
-	const SEARCH_IDENTIFIER = 's';
+	const SEARCH_PARAM_IDENTIFIER = 's';
 
 	/**
 	 * @var array
@@ -110,8 +110,8 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			$sql = sprintf( 'SELECT DISTINCT (meta_key), meta_value FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 			$sql .= sprintf( ' WHERE meta_key NOT IN (%s)', self::excluded_custom_fields_list() );
 		}
-		if ( isset( $_POST[ self::SEARCH_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_IDENTIFIER ] ) ) {
-			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%')";
+		if ( isset( $_POST[ self::SEARCH_PARAM_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_PARAM_IDENTIFIER ] ) ) {
+			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_PARAM_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_PARAM_IDENTIFIER]}%')";
 		}
 		$sql .= sprintf( ' LIMIT %d OFFSET %d', $per_page, $offset );
 
@@ -135,8 +135,8 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			$sql = sprintf( 'SELECT COUNT(DISTINCT (meta_key), meta_value) FROM %s WHERE meta_key NOT LIKE \'%s\'', $wpdb->postmeta, '_qor%' );
 			$sql .= sprintf( ' meta_key NOT IN (%s)', self::excluded_custom_fields_list() );
 		}
-		if ( isset( $_POST[ self::SEARCH_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_IDENTIFIER ] ) ) {
-			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_IDENTIFIER]}%')";
+		if ( isset( $_POST[ self::SEARCH_PARAM_IDENTIFIER ] ) && ( '' !== $_POST[ self::SEARCH_PARAM_IDENTIFIER ] ) ) {
+			$sql .= " AND (meta_key LIKE '%{$_POST[self::SEARCH_PARAM_IDENTIFIER]}%' OR meta_value LIKE '%{$_POST[self::SEARCH_PARAM_IDENTIFIER]}%')";
 		}
 
 		return $wpdb->get_var( $sql );
@@ -464,7 +464,7 @@ class SP_Plugin {
 	 * @return SP_Plugin
 	 */
 	public static function get_instance() {
-		if ( ! isset( self::$instance ) ) {
+		if ( null === self::$instance ) {
 			self::$instance = new self();
 		}
 

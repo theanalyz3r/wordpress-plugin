@@ -358,7 +358,6 @@ class Qordoba_Options {
                 <label for="<?php print $field_name; ?>"><?php printf( '%s (%s): ', $lang['name'], $slug ); ?></label>
                 <select name="<?php print $field_name; ?>">
                     <option value=""><?php _e( 'Select Language', 'qordoba' ); ?></option>
-
 					<?php foreach ( $project_languages as $qor_lang ): ?>
                         <option value="<?php print $qor_lang->code; ?>" <?php selected( $selected, $qor_lang->code ); ?>><?php printf( '%s (%s)', $qor_lang->name, $qor_lang->code ); ?></option>
 					<?php endforeach; ?>

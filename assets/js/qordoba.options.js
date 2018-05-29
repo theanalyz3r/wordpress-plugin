@@ -84,7 +84,6 @@
             };
 
         var request = function () {
-
             if (isBulkSend(action)) {
                 $.ajax({
                     url: ajaxurl,
