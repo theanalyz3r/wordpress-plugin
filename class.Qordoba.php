@@ -694,6 +694,9 @@ class Qordoba {
 					$object = new Qordoba_Object( $source_post, $metaCustomData );
 					$object->upload();
 				}
+			} else {
+				$object = new Qordoba_Object( $source_post );
+				$object->upload();
 			}
 		} else {
 			$object = new Qordoba_Object( $source_post );

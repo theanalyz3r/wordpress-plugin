@@ -20,7 +20,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 	/**
 	 * @const int
 	 */
-	const ITEMS_PER_PAGE = 20;
+	const ITEMS_PER_PAGE = 50;
 	/**
 	 * @const string
 	 */
@@ -399,7 +399,7 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 			}
 		}
 
-		return in_array( $item['meta_key'], self::$post_custom_fields );
+		return in_array( $item['meta_key'], self::$post_custom_fields, true );
 	}
 
 	/**
@@ -641,9 +641,9 @@ class Qordoba_Custom_Fields_Table extends WP_List_Table {
 class SP_Plugin {
 
 	/**
-	 * @var
+	 * @var SP_Plugin
 	 */
-	static $instance;
+	static private $instance;
 
 	/**
 	 * @var
@@ -673,7 +673,7 @@ class SP_Plugin {
 	 * @return SP_Plugin
 	 */
 	public static function get_instance() {
-		if ( ! isset( self::$instance ) ) {
+		if ( self::$instance === null ) {
 			self::$instance = new self();
 		}
 
@@ -743,9 +743,6 @@ class SP_Plugin {
 
 
 add_action(
-/**
- *
- */
 	'plugins_loaded', function () {
 	SP_Plugin::get_instance();
 } );
